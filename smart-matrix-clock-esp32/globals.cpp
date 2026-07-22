@@ -29,3 +29,4 @@ uint32_t cfgDateIntervalMs              = DATE_INTERVAL_DEFAULT_MS;
 bool     cfgDateEnabled                 = true;
 char     cfgApiKey[API_KEY_LEN]         = {0};
 bool     cfgApiAuthEnabled              = false;
+char     cfgUiLanguage[UI_LANG_CODE_MAX] = UI_LANG_DEFAULT;

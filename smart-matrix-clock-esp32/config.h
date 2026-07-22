@@ -47,6 +47,16 @@
 #define LANG_CODE_MAX   4    // "pt\0" or "en\0"
 #define LANG_DEFAULT    "pt"
 
+// ─── Web UI language ───────────────────────────────────────────────────────────
+// Separate from LANG_DEFAULT/cfgLanguage above, which only controls the
+// on-device clock/date weekday-month locale. This controls the web panel's
+// own interface language and is independent of the display's language.
+// The list of accepted codes lives in persistence.cpp (isUiLanguageValid()) —
+// add a new entry there (and a matching I18N dictionary in web_page.cpp)
+// to support another language, no other branching logic needed.
+#define UI_LANG_CODE_MAX  4      // "en\0" or "pt\0"
+#define UI_LANG_DEFAULT   "en"
+
 // ─── Date display ─────────────────────────────────────────────────────────────
 #define DATE_INTERVAL_DEFAULT_MS  30000UL   // show date every 30 s
 #define DATE_INTERVAL_MIN_MS       5000UL   // minimum 5 s
@@ -87,6 +97,7 @@
 #define NVS_KEY_ALERT_DUR   "alert_dur"
 #define NVS_KEY_API_KEY     "api_key"
 #define NVS_KEY_API_AUTH    "api_auth"
+#define NVS_KEY_UI_LANGUAGE "ui_lang"
 
 // ─── Restart ──────────────────────────────────────────────────────────────────
 #define RESTART_DELAY_MS  1500   // default deferred restart delay

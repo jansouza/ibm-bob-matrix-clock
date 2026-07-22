@@ -96,6 +96,7 @@ static void _handleGetConfig(AsyncWebServerRequest* req) {
     doc["date_enabled"]     = cfgDateEnabled;
     doc["api_auth_enabled"] = cfgApiAuthEnabled;
     // api_key is intentionally omitted from GET /api/config — use the API tab in the web UI
+    doc["ui_language"]      = cfgUiLanguage;
 
     doc["weather_enabled"]    = slotEnabled[2];
     doc["weather_update_ms"]  = slotIntervalMs[2];   // reused for fetch interval (Phase 4 will add separate field)
@@ -199,6 +200,17 @@ static void _handlePostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t 
     // ── api_auth_enabled ──────────────────────────────────────────────────────
     if (doc["api_auth_enabled"].is<bool>()) {
         cfgApiAuthEnabled = doc["api_auth_enabled"].as<bool>();
+        changed = true;
+    }
+
+    // ── ui_language ───────────────────────────────────────────────────────────
+    if (doc["ui_language"].is<const char*>()) {
+        const char* lang = doc["ui_language"].as<const char*>();
+        if (!isUiLanguageValid(lang)) {
+            _sendError(req, 400, "Unknown ui_language"); return;
+        }
+        strncpy(cfgUiLanguage, lang, UI_LANG_CODE_MAX - 1);
+        cfgUiLanguage[UI_LANG_CODE_MAX - 1] = '\0';
         changed = true;
     }
 

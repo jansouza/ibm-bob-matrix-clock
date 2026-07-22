@@ -31,3 +31,4 @@ extern uint32_t cfgDateIntervalMs;    // how often date fires (ms); 0 = disabled
 extern bool     cfgDateEnabled;       // true = show date periodically
 extern char     cfgApiKey[];          // API key (32 hex chars + null)
 extern bool     cfgApiAuthEnabled;    // true = require X-API-Key header on every endpoint
+extern char     cfgUiLanguage[];      // web panel UI language (e.g. "en", "pt") — independent of cfgLanguage

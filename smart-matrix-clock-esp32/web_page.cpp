@@ -6,7 +6,7 @@
 
 const char WEB_PAGE_HTML[] = R"=====(
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -101,75 +101,79 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
   border-radius:50%;background:#58a6ff;cursor:pointer;border:2px solid #0d1117}
 .range-val{min-width:32px;text-align:right;font-size:14px;font-weight:600;
   color:#58a6ff;font-family:monospace}
+.lang-select{margin-left:auto;padding:4px 8px;border:1px solid #30363d;
+  border-radius:4px;font-size:13px;background:#0d1117;color:#c9d1d9;
+  cursor:pointer}
 </style>
 </head>
 <body>
 <header>
   <h1>&#9719; Smart Matrix Clock</h1>
   <span id="ip-badge">...</span>
+  <select class="lang-select" id="ui-lang-select"></select>
 </header>
 <div class="container">
   <div class="status-bar">
-    <span>NTP: <strong id="st-ntp">--</strong></span>
-    <span>Slot: <strong id="st-slot">--</strong></span>
-    <span>WiFi: <strong id="st-ssid">--</strong></span>
+    <span><span data-i18n="status.ntp">NTP</span>: <strong id="st-ntp">--</strong></span>
+    <span><span data-i18n="status.slot">Slot</span>: <strong id="st-slot">--</strong></span>
+    <span><span data-i18n="status.wifi">WiFi</span>: <strong id="st-ssid">--</strong></span>
   </div>
 
   <div class="tabs">
-    <button class="tab active" data-tab="clock">&#128336; Rel&#243;gio</button>
-    <button class="tab" data-tab="alert">&#128276; Alerta</button>
-    <button class="tab" data-tab="weather">&#127780; Clima</button>
-    <button class="tab" data-tab="quotes">&#128200; Cota&#231;&#245;es</button>
-    <button class="tab" data-tab="network">&#128246; Rede</button>
-    <button class="tab" data-tab="apikey">&#128273; API</button>
+    <button class="tab active" data-tab="clock">&#128336; <span data-i18n="tab.clock">Clock</span></button>
+    <button class="tab" data-tab="alert">&#128276; <span data-i18n="tab.alert">Alert</span></button>
+    <button class="tab" data-tab="weather">&#127780; <span data-i18n="tab.weather">Weather</span></button>
+    <button class="tab" data-tab="quotes">&#128200; <span data-i18n="tab.quotes">Quotes</span></button>
+    <button class="tab" data-tab="network">&#128246; <span data-i18n="tab.network">Network</span></button>
+    <button class="tab" data-tab="apikey">&#128273; <span data-i18n="tab.api">API</span></button>
   </div>
 
   <!-- ── CLOCK TAB ────────────────────────────────────────────────────── -->
   <div class="panel active" id="tab-clock">
     <div class="card">
-      <h2>Preview ao vivo</h2>
+      <h2 data-i18n="clock.preview">Live preview</h2>
       <div class="preview" id="live-preview">--:--</div>
     </div>
 
     <div class="card">
-      <h2>Hora e Fuso</h2>
+      <h2 data-i18n="clock.timeAndTz">Time and Timezone</h2>
       <div class="field">
-        <label>Fuso hor&#225;rio (IANA)</label>
+        <label data-i18n="clock.timezone">Timezone (IANA)</label>
         <select id="cfg-timezone"></select>
       </div>
       <div class="row">
         <div class="field">
-          <label>Idioma</label>
+          <label data-i18n="clock.dateLanguage">Date language</label>
           <select id="cfg-language">
             <option value="pt">Portugu&#234;s</option>
             <option value="en">English</option>
           </select>
         </div>
         <div class="field">
-          <label>Servidor NTP</label>
+          <label data-i18n="clock.ntpServer">NTP server</label>
           <input id="cfg-ntp-server" type="text" maxlength="63"/>
         </div>
       </div>
     </div>
 
     <div class="card">
-      <h2>Data</h2>
+      <h2 data-i18n="clock.date">Date</h2>
       <div class="toggle-row" style="margin-bottom:10px">
-        <span style="font-size:13px;font-weight:500;color:#c9d1d9">Exibir data periodicamente</span>
+        <span style="font-size:13px;font-weight:500;color:#c9d1d9" data-i18n="clock.showDatePeriodically">Show date periodically</span>
         <label class="toggle"><input type="checkbox" id="cfg-date-en"/><span class="slider-toggle"></span></label>
       </div>
       <div id="date-options">
         <div class="field">
-          <label>Intervalo de exibi&#231;&#227;o (segundos)</label>
+          <label data-i18n="clock.dateInterval">Display interval (seconds)</label>
           <input id="cfg-date-interval" type="number" min="5" max="300"/>
         </div>
       </div>
     </div>
 
     <div class="card">
-      <h2>Display</h2>
+      <h2 data-i18n="clock.display">Display</h2>
       <div class="range-field">
-        <label>Brilho: <span id="brightness-val">4</span> / 15</label>
+        <label><span data-i18n="clock.brightness">Brightness</span>: <span id="brightness-val">4</span> / 15</label>
         <div class="range-row">
           <span style="font-size:12px;color:#8b949e">0</span>
           <input id="cfg-brightness" type="range" min="0" max="15" value="4"/>
@@ -178,47 +182,47 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
         </div>
       </div>
       <div class="range-field">
-        <label>Velocidade de scroll: <span id="speed-val">50</span> ms/frame</label>
+        <label><span data-i18n="clock.scrollSpeed">Scroll speed</span>: <span id="speed-val">50</span> ms/frame</label>
         <div class="range-row">
-          <span style="font-size:12px;color:#8b949e">R&#225;pido</span>
+          <span style="font-size:12px;color:#8b949e" data-i18n="clock.fast">Fast</span>
           <input id="cfg-scroll-speed" type="range" min="10" max="200" value="50"/>
-          <span style="font-size:12px;color:#8b949e">Lento</span>
+          <span style="font-size:12px;color:#8b949e" data-i18n="clock.slow">Slow</span>
           <span class="range-val" id="speed-val-badge">50</span>
         </div>
-        <div class="hint" style="margin-top:6px">10 ms = mais r&#225;pido &mdash; 200 ms = mais lento</div>
+        <div class="hint" style="margin-top:6px" data-i18n="clock.scrollHint">10 ms = fastest &mdash; 200 ms = slowest</div>
       </div>
     </div>
 
     <div class="actions">
-      <button class="btn btn-primary" id="btn-save-clock">Salvar configura&#231;&#245;es</button>
+      <button class="btn btn-primary" id="btn-save-clock" data-i18n="common.saveSettings">Save settings</button>
     </div>
   </div>
 
   <!-- ── ALERT TAB ───────────────────────────────────────────────────── -->
   <div class="panel" id="tab-alert">
     <div class="card">
-      <h2>Mensagem de Alerta</h2>
+      <h2 data-i18n="alert.title">Alert Message</h2>
       <div class="field">
-        <label>Mensagem (m&#225;x. 127 chars)</label>
-        <input id="alert-msg" type="text" maxlength="127" placeholder="Digite uma mensagem..."/>
+        <label data-i18n="alert.message">Message (max. 127 chars)</label>
+        <input id="alert-msg" type="text" maxlength="127" data-i18n-ph="alert.placeholder" placeholder="Type a message..."/>
       </div>
       <div class="row3">
         <div class="field">
-          <label>Modo de exibi&#231;&#227;o</label>
+          <label data-i18n="alert.mode">Display mode</label>
           <select id="alert-mode">
-            <option value="0">&#8618; Scroll</option>
-            <option value="1">&#10022; Piscar</option>
-            <option value="2">&#9632; Est&#225;tico</option>
-            <option value="3">&#10022;&#8618; Piscar + Scroll</option>
+            <option value="0" data-i18n="alert.modeScroll">&#8618; Scroll</option>
+            <option value="1" data-i18n="alert.modeBlink">&#10022; Blink</option>
+            <option value="2" data-i18n="alert.modeStatic">&#9632; Static</option>
+            <option value="3" data-i18n="alert.modeBlinkScroll">&#10022;&#8618; Blink + Scroll</option>
           </select>
         </div>
         <div class="field">
-          <label>Dura&#231;&#227;o (segundos)</label>
+          <label data-i18n="alert.duration">Duration (seconds)</label>
           <input id="alert-duration" type="number" min="1" max="60" value="5"/>
-          <div class="hint">Tempo de exibi&#231;&#227;o no display</div>
+          <div class="hint" data-i18n="alert.durationHint">Time shown on the display</div>
         </div>
         <div class="field" style="display:flex;align-items:flex-end">
-          <button class="btn btn-primary" id="btn-send-alert" style="width:100%">Enviar</button>
+          <button class="btn btn-primary" id="btn-send-alert" style="width:100%" data-i18n="alert.send">Send</button>
         </div>
       </div>
     </div>
@@ -227,39 +231,39 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
   <!-- ── WEATHER TAB ──────────────────────────────────────────────────── -->
   <div class="panel" id="tab-weather">
     <div class="card">
-      <h2>Slot de Clima</h2>
+      <h2 data-i18n="weather.slotTitle">Weather Slot</h2>
       <div class="toggle-row">
-        <span>Habilitar slot de clima</span>
+        <span data-i18n="weather.enable">Enable weather slot</span>
         <label class="toggle"><input type="checkbox" id="cfg-weather-en"/><span class="slider-toggle"></span></label>
       </div>
     </div>
     <div class="card">
-      <h2>Localiza&#231;&#227;o</h2>
+      <h2 data-i18n="weather.location">Location</h2>
       <div class="row">
         <div class="field">
-          <label>Latitude</label>
+          <label data-i18n="weather.latitude">Latitude</label>
           <input id="cfg-weather-lat" type="number" step="0.0001" min="-90" max="90"/>
         </div>
         <div class="field">
-          <label>Longitude</label>
+          <label data-i18n="weather.longitude">Longitude</label>
           <input id="cfg-weather-lon" type="number" step="0.0001" min="-180" max="180"/>
         </div>
       </div>
     </div>
     <div class="card">
-      <h2>Configura&#231;&#245;es</h2>
+      <h2 data-i18n="common.settings">Settings</h2>
       <div class="row">
         <div class="field">
-          <label>Intervalo de atualiza&#231;&#227;o (minutos)</label>
+          <label data-i18n="common.updateInterval">Update interval (minutes)</label>
           <input id="cfg-weather-update" type="number" min="5" max="1440"/>
         </div>
         <div class="field">
-          <label>Tempo de exibi&#231;&#227;o (segundos)</label>
+          <label data-i18n="common.displayInterval">Display time (seconds)</label>
           <input id="cfg-weather-display" type="number" min="5" max="300"/>
         </div>
       </div>
       <div class="field">
-        <label>Unidade de temperatura</label>
+        <label data-i18n="weather.tempUnit">Temperature unit</label>
         <select id="cfg-temp-unit">
           <option value="C">Celsius (&#176;C)</option>
           <option value="F">Fahrenheit (&#176;F)</option>
@@ -267,67 +271,67 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
       </div>
     </div>
     <div class="actions">
-      <button class="btn btn-primary" id="btn-save-weather">Salvar configura&#231;&#245;es</button>
+      <button class="btn btn-primary" id="btn-save-weather" data-i18n="common.saveSettings">Save settings</button>
     </div>
   </div>
 
   <!-- ── QUOTES TAB ───────────────────────────────────────────────────── -->
   <div class="panel" id="tab-quotes">
     <div class="card">
-      <h2>Slot de Cota&#231;&#245;es</h2>
+      <h2 data-i18n="quotes.slotTitle">Quotes Slot</h2>
       <div class="toggle-row">
-        <span>Habilitar slot de cota&#231;&#245;es</span>
+        <span data-i18n="quotes.enable">Enable quotes slot</span>
         <label class="toggle"><input type="checkbox" id="cfg-quotes-en"/><span class="slider-toggle"></span></label>
       </div>
     </div>
     <div class="card">
-      <h2>Ativos (tickers)</h2>
+      <h2 data-i18n="quotes.assets">Assets (tickers)</h2>
       <div class="field">
-        <label>Tickers separados por v&#237;rgula</label>
+        <label data-i18n="quotes.tickersLabel">Comma-separated tickers</label>
         <input id="cfg-quotes-tickers" type="text" placeholder="PETR4.SA,AAPL,BTC-USD" maxlength="120"/>
-        <div class="hint">Ex.: PETR4.SA, AAPL, BTC-USD &mdash; m&#225;x. 8 tickers</div>
+        <div class="hint" data-i18n="quotes.tickersHint">E.g.: PETR4.SA, AAPL, BTC-USD &mdash; max. 8 tickers</div>
       </div>
     </div>
     <div class="card">
-      <h2>Configura&#231;&#245;es</h2>
+      <h2 data-i18n="common.settings">Settings</h2>
       <div class="row">
         <div class="field">
-          <label>Intervalo de atualiza&#231;&#227;o (minutos)</label>
+          <label data-i18n="common.updateInterval">Update interval (minutes)</label>
           <input id="cfg-quotes-update" type="number" min="5" max="1440"/>
         </div>
         <div class="field">
-          <label>Tempo de exibi&#231;&#227;o (segundos)</label>
+          <label data-i18n="common.displayInterval">Display time (seconds)</label>
           <input id="cfg-quotes-display" type="number" min="5" max="300"/>
         </div>
       </div>
     </div>
     <div class="actions">
-      <button class="btn btn-primary" id="btn-save-quotes">Salvar configura&#231;&#245;es</button>
+      <button class="btn btn-primary" id="btn-save-quotes" data-i18n="common.saveSettings">Save settings</button>
     </div>
   </div>
 
   <!-- ── NETWORK TAB ──────────────────────────────────────────────────── -->
   <div class="panel" id="tab-network">
     <div class="card">
-      <h2>Conex&#227;o atual</h2>
+      <h2 data-i18n="network.currentConnection">Current connection</h2>
       <div id="net-info">
         <div class="info-row"><span class="info-label">SSID</span><span id="net-ssid">--</span></div>
         <div class="info-row"><span class="info-label">IP</span><span id="net-ip">--</span></div>
-        <div class="info-row"><span class="info-label">Status</span><span id="net-status">--</span></div>
+        <div class="info-row"><span class="info-label" data-i18n="network.status">Status</span><span id="net-status">--</span></div>
       </div>
     </div>
     <div class="card">
-      <h2>Nova rede WiFi</h2>
+      <h2 data-i18n="network.newWifi">New WiFi network</h2>
       <div class="field">
         <label>SSID</label>
         <input id="wifi-ssid" type="text" maxlength="32" autocomplete="off"/>
       </div>
       <div class="field">
-        <label>Senha</label>
+        <label data-i18n="network.password">Password</label>
         <input id="wifi-pass" type="password" maxlength="64" autocomplete="new-password"/>
       </div>
       <div class="actions">
-        <button class="btn btn-primary" id="btn-save-wifi">Salvar e reiniciar</button>
+        <button class="btn btn-primary" id="btn-save-wifi" data-i18n="network.saveAndRestart">Save and restart</button>
       </div>
     </div>
   </div>
@@ -335,23 +339,23 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
   <!-- ── API TAB ──────────────────────────────────────────────────────── -->
   <div class="panel" id="tab-apikey">
     <div class="card">
-      <h2>Autentica&#231;&#227;o de API</h2>
+      <h2 data-i18n="api.authTitle">API Authentication</h2>
       <div class="toggle-row">
-        <span>Exigir chave de API nos endpoints <code>/api/*</code></span>
+        <span data-i18n="api.requireKey">Require API key on <code>/api/*</code> endpoints</span>
         <label class="toggle"><input type="checkbox" id="cfg-api-auth"/><span class="slider-toggle"></span></label>
       </div>
-      <p style="margin-top:10px;font-size:13px;color:#8b949e">
-        Quando ativado, todas as requisi&#231;&#245;es de escrita e leitura de estado devem incluir o header
-        <code>X-API-Key: &lt;chave&gt;</code>. A interface web e os endpoints
-        <code>GET /api/config</code> e <code>GET /api/timezones</code> permanecem acess&#237;veis sem autentica&#231;&#227;o.
+      <p style="margin-top:10px;font-size:13px;color:#8b949e" data-i18n="api.authHint">
+        When enabled, all write and state-reading requests must include the header
+        <code>X-API-Key: &lt;key&gt;</code>. The web interface and the endpoints
+        <code>GET /api/config</code> and <code>GET /api/timezones</code> remain accessible without authentication.
       </p>
     </div>
     <div class="card">
-      <h2>Chave de API</h2>
+      <h2 data-i18n="api.keyTitle">API Key</h2>
       <div class="key-box" id="api-key-box">...</div>
       <div class="actions" style="margin-top:10px">
-        <button class="btn btn-danger" id="btn-regen-key">Regenerar chave</button>
-        <button class="btn btn-primary" id="btn-save-api">Salvar configura&#231;&#245;es</button>
+        <button class="btn btn-danger" id="btn-regen-key" data-i18n="api.regenerate">Regenerate key</button>
+        <button class="btn btn-primary" id="btn-save-api" data-i18n="common.saveSettings">Save settings</button>
       </div>
     </div>
   </div>
@@ -361,12 +365,191 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
 <div class="toast" id="toast"></div>
 
 <script>
+// ── I18N ─────────────────────────────────────────────────────────────────────
+// One dictionary object per supported language, keyed by the same dot-path
+// keys used in data-i18n attributes throughout the page. To add a new
+// language: add one more key here (e.g. I18N.es = {...}), add a matching
+// <option> in the #ui-lang-select population loop below (already automatic,
+// see populateLangSelect()), and add the code to the firmware's
+// isUiLanguageValid() table in persistence.cpp.
+var I18N = {
+  en: {
+    'status.ntp': 'NTP', 'status.slot': 'Slot', 'status.wifi': 'WiFi',
+    'tab.clock': 'Clock', 'tab.alert': 'Alert', 'tab.weather': 'Weather',
+    'tab.quotes': 'Quotes', 'tab.network': 'Network', 'tab.api': 'API',
+    'clock.preview': 'Live preview',
+    'clock.timeAndTz': 'Time and Timezone',
+    'clock.timezone': 'Timezone (IANA)',
+    'clock.dateLanguage': 'Date language',
+    'clock.ntpServer': 'NTP server',
+    'clock.date': 'Date',
+    'clock.showDatePeriodically': 'Show date periodically',
+    'clock.dateInterval': 'Display interval (seconds)',
+    'clock.display': 'Display',
+    'clock.brightness': 'Brightness',
+    'clock.scrollSpeed': 'Scroll speed',
+    'clock.fast': 'Fast', 'clock.slow': 'Slow',
+    'clock.scrollHint': '10 ms = fastest &mdash; 200 ms = slowest',
+    'alert.title': 'Alert Message',
+    'alert.message': 'Message (max. 127 chars)',
+    'alert.placeholder': 'Type a message...',
+    'alert.mode': 'Display mode',
+    'alert.modeScroll': '&#8618; Scroll',
+    'alert.modeBlink': '&#10022; Blink',
+    'alert.modeStatic': '&#9632; Static',
+    'alert.modeBlinkScroll': '&#10022;&#8618; Blink + Scroll',
+    'alert.duration': 'Duration (seconds)',
+    'alert.durationHint': 'Time shown on the display',
+    'alert.send': 'Send',
+    'weather.slotTitle': 'Weather Slot',
+    'weather.enable': 'Enable weather slot',
+    'weather.location': 'Location',
+    'weather.latitude': 'Latitude', 'weather.longitude': 'Longitude',
+    'weather.tempUnit': 'Temperature unit',
+    'quotes.slotTitle': 'Quotes Slot',
+    'quotes.enable': 'Enable quotes slot',
+    'quotes.assets': 'Assets (tickers)',
+    'quotes.tickersLabel': 'Comma-separated tickers',
+    'quotes.tickersHint': 'E.g.: PETR4.SA, AAPL, BTC-USD &mdash; max. 8 tickers',
+    'network.currentConnection': 'Current connection',
+    'network.status': 'Status',
+    'network.newWifi': 'New WiFi network',
+    'network.password': 'Password',
+    'network.saveAndRestart': 'Save and restart',
+    'api.authTitle': 'API Authentication',
+    'api.requireKey': 'Require API key on <code>/api/*</code> endpoints',
+    'api.authHint': 'When enabled, all write and state-reading requests must include the header <code>X-API-Key: &lt;key&gt;</code>. The web interface and the endpoints <code>GET /api/config</code> and <code>GET /api/timezones</code> remain accessible without authentication.',
+    'api.keyTitle': 'API Key',
+    'api.regenerate': 'Regenerate key',
+    'common.settings': 'Settings',
+    'common.updateInterval': 'Update interval (minutes)',
+    'common.displayInterval': 'Display time (seconds)',
+    'common.saveSettings': 'Save settings',
+    'status.ntpSynced': 'Synced', 'status.ntpWaiting': 'Waiting',
+    'status.connected': 'Connected', 'status.noSync': 'No sync',
+    'toast.saved': 'Saved!', 'toast.error': 'Error: ',
+    'toast.networkError': 'Network error',
+    'toast.alertSent': 'Alert sent!',
+    'toast.ssidEmpty': 'SSID cannot be empty',
+    'toast.confirmRestart': 'This will restart the device. Continue?',
+    'toast.savedRestarting': 'Saved! Restarting...',
+    'toast.confirmRegenKey': 'Generate a new API key? The current key will be invalidated.',
+    'toast.newKeyGenerated': 'New key generated!'
+  },
+  pt: {
+    'status.ntp': 'NTP', 'status.slot': 'Slot', 'status.wifi': 'WiFi',
+    'tab.clock': 'Rel&#243;gio', 'tab.alert': 'Alerta', 'tab.weather': 'Clima',
+    'tab.quotes': 'Cota&#231;&#245;es', 'tab.network': 'Rede', 'tab.api': 'API',
+    'clock.preview': 'Preview ao vivo',
+    'clock.timeAndTz': 'Hora e Fuso',
+    'clock.timezone': 'Fuso hor&#225;rio (IANA)',
+    'clock.dateLanguage': 'Idioma da data',
+    'clock.ntpServer': 'Servidor NTP',
+    'clock.date': 'Data',
+    'clock.showDatePeriodically': 'Exibir data periodicamente',
+    'clock.dateInterval': 'Intervalo de exibi&#231;&#227;o (segundos)',
+    'clock.display': 'Display',
+    'clock.brightness': 'Brilho',
+    'clock.scrollSpeed': 'Velocidade de scroll',
+    'clock.fast': 'R&#225;pido', 'clock.slow': 'Lento',
+    'clock.scrollHint': '10 ms = mais r&#225;pido &mdash; 200 ms = mais lento',
+    'alert.title': 'Mensagem de Alerta',
+    'alert.message': 'Mensagem (m&#225;x. 127 chars)',
+    'alert.placeholder': 'Digite uma mensagem...',
+    'alert.mode': 'Modo de exibi&#231;&#227;o',
+    'alert.modeScroll': '&#8618; Scroll',
+    'alert.modeBlink': '&#10022; Piscar',
+    'alert.modeStatic': '&#9632; Est&#225;tico',
+    'alert.modeBlinkScroll': '&#10022;&#8618; Piscar + Scroll',
+    'alert.duration': 'Dura&#231;&#227;o (segundos)',
+    'alert.durationHint': 'Tempo de exibi&#231;&#227;o no display',
+    'alert.send': 'Enviar',
+    'weather.slotTitle': 'Slot de Clima',
+    'weather.enable': 'Habilitar slot de clima',
+    'weather.location': 'Localiza&#231;&#227;o',
+    'weather.latitude': 'Latitude', 'weather.longitude': 'Longitude',
+    'weather.tempUnit': 'Unidade de temperatura',
+    'quotes.slotTitle': 'Slot de Cota&#231;&#245;es',
+    'quotes.enable': 'Habilitar slot de cota&#231;&#245;es',
+    'quotes.assets': 'Ativos (tickers)',
+    'quotes.tickersLabel': 'Tickers separados por v&#237;rgula',
+    'quotes.tickersHint': 'Ex.: PETR4.SA, AAPL, BTC-USD &mdash; m&#225;x. 8 tickers',
+    'network.currentConnection': 'Conex&#227;o atual',
+    'network.status': 'Status',
+    'network.newWifi': 'Nova rede WiFi',
+    'network.password': 'Senha',
+    'network.saveAndRestart': 'Salvar e reiniciar',
+    'api.authTitle': 'Autentica&#231;&#227;o de API',
+    'api.requireKey': 'Exigir chave de API nos endpoints <code>/api/*</code>',
+    'api.authHint': 'Quando ativado, todas as requisi&#231;&#245;es de escrita e leitura de estado devem incluir o header <code>X-API-Key: &lt;chave&gt;</code>. A interface web e os endpoints <code>GET /api/config</code> e <code>GET /api/timezones</code> permanecem acess&#237;veis sem autentica&#231;&#227;o.',
+    'api.keyTitle': 'Chave de API',
+    'api.regenerate': 'Regenerar chave',
+    'common.settings': 'Configura&#231;&#245;es',
+    'common.updateInterval': 'Intervalo de atualiza&#231;&#227;o (minutos)',
+    'common.displayInterval': 'Tempo de exibi&#231;&#227;o (segundos)',
+    'common.saveSettings': 'Salvar configura&#231;&#245;es',
+    'status.ntpSynced': 'Sincronizado', 'status.ntpWaiting': 'Aguardando',
+    'status.connected': 'Conectado', 'status.noSync': 'Sem sync',
+    'toast.saved': 'Salvo!', 'toast.error': 'Erro: ',
+    'toast.networkError': 'Erro de rede',
+    'toast.alertSent': 'Alerta enviado!',
+    'toast.ssidEmpty': 'SSID não pode ser vazio',
+    'toast.confirmRestart': 'Isso vai reiniciar o dispositivo. Continuar?',
+    'toast.savedRestarting': 'Salvo! Reiniciando...',
+    'toast.confirmRegenKey': 'Gerar nova chave de API? A chave atual será invalidada.',
+    'toast.newKeyGenerated': 'Nova chave gerada!'
+  }
+};
+
+var currentLang = 'en';
+
+// Look up a translation key in the active language, falling back to `en`
+// and finally to the key itself so a missing/older string never renders blank.
+function t(key) {
+  var dict = I18N[currentLang] || I18N.en;
+  return dict[key] !== undefined ? dict[key] : (I18N.en[key] !== undefined ? I18N.en[key] : key);
+}
+
+// Apply `lang` to every data-i18n / data-i18n-ph element on the page.
+// Falls back to 'en' if `lang` isn't a known dictionary (e.g. a future
+// firmware saved a language this page build doesn't recognise yet).
+function applyLang(lang) {
+  currentLang = I18N[lang] ? lang : 'en';
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    el.innerHTML = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(function(el) {
+    el.setAttribute('placeholder', t(el.dataset.i18nPh));
+  });
+  var sel = document.getElementById('ui-lang-select');
+  if (sel) sel.value = currentLang;
+}
+
+// Populate the header language selector from the dictionaries available,
+// so adding a language to I18N is enough for it to show up in the UI.
+var LANG_LABELS = { en: 'English', pt: 'Português' };
+function populateLangSelect() {
+  var sel = document.getElementById('ui-lang-select');
+  Object.keys(I18N).forEach(function(code) {
+    var opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = LANG_LABELS[code] || code;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', function() {
+    applyLang(this.value);
+    fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ui_language: this.value})}).catch(function(){});
+  });
+}
+
 // ── Utilities ────────────────────────────────────────────────────────────────
 function showToast(msg, ms) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.display = 'block';
-  setTimeout(function(){ t.style.display = 'none'; }, ms || 2500);
+  var toastEl = document.getElementById('toast');
+  toastEl.textContent = msg;
+  toastEl.style.display = 'block';
+  setTimeout(function(){ toastEl.style.display = 'none'; }, ms || 2500);
 }
 
 function val(id) { return document.getElementById(id).value; }
@@ -419,6 +602,7 @@ function loadTimezones(selected) {
 // ── Load config ──────────────────────────────────────────────────────────────
 function loadConfig() {
   fetch('/api/config').then(function(r){ return r.json(); }).then(function(c) {
+    applyLang(c.ui_language || 'en');
     loadTimezones(c.timezone);
     setVal('cfg-language', c.language);
     setVal('cfg-ntp-server', c.ntp_server);
@@ -460,13 +644,13 @@ function pollStatus() {
   fetch('/api/status').then(function(r){ return r.json(); }).then(function(s) {
     var preview = document.getElementById('live-preview');
     if (s.time_str) preview.textContent = s.time_str;
-    setText('st-ntp', s.ntp_synced ? 'Sincronizado' : 'Aguardando');
+    setText('st-ntp', s.ntp_synced ? t('status.ntpSynced') : t('status.ntpWaiting'));
     setText('st-slot', 'slot ' + s.active_slot);
     setText('st-ssid', s.ssid || '--');
     setText('ip-badge', s.ip || '--');
     setText('net-ssid', s.ssid || '--');
     setText('net-ip', s.ip || '--');
-    setText('net-status', s.ntp_synced ? 'Conectado' : 'Sem sync');
+    setText('net-status', s.ntp_synced ? t('status.connected') : t('status.noSync'));
   }).catch(function(){});
 }
 
@@ -483,8 +667,8 @@ document.getElementById('btn-save-clock').addEventListener('click', function() {
   };
   fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {
-    showToast(r.ok ? 'Salvo!' : ('Erro: ' + (r.error || '?')));
-  }).catch(function(){ showToast('Erro de rede'); });
+    showToast(r.ok ? t('toast.saved') : (t('toast.error') + (r.error || '?')));
+  }).catch(function(){ showToast(t('toast.networkError')); });
 });
 
 // ── Send alert ───────────────────────────────────────────────────────────────
@@ -496,9 +680,9 @@ document.getElementById('btn-send-alert').addEventListener('click', function() {
   var body = { message: msg, mode: mode, duration_ms: dur };
   fetch('/api/alert', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {
-    showToast(r.ok ? 'Alerta enviado!' : ('Erro: ' + (r.error || '?')));
+    showToast(r.ok ? t('toast.alertSent') : (t('toast.error') + (r.error || '?')));
     if (r.ok) setVal('alert-msg', '');
-  }).catch(function(){ showToast('Erro de rede'); });
+  }).catch(function(){ showToast(t('toast.networkError')); });
 });
 
 // ── Save weather config ──────────────────────────────────────────────────────
@@ -513,8 +697,8 @@ document.getElementById('btn-save-weather').addEventListener('click', function()
   };
   fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {
-    showToast(r.ok ? 'Salvo!' : ('Erro: ' + (r.error || '?')));
-  }).catch(function(){ showToast('Erro de rede'); });
+    showToast(r.ok ? t('toast.saved') : (t('toast.error') + (r.error || '?')));
+  }).catch(function(){ showToast(t('toast.networkError')); });
 });
 
 // ── Save quotes config ───────────────────────────────────────────────────────
@@ -527,34 +711,34 @@ document.getElementById('btn-save-quotes').addEventListener('click', function() 
   };
   fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {
-    showToast(r.ok ? 'Salvo!' : ('Erro: ' + (r.error || '?')));
-  }).catch(function(){ showToast('Erro de rede'); });
+    showToast(r.ok ? t('toast.saved') : (t('toast.error') + (r.error || '?')));
+  }).catch(function(){ showToast(t('toast.networkError')); });
 });
 
 // ── Save WiFi ────────────────────────────────────────────────────────────────
 document.getElementById('btn-save-wifi').addEventListener('click', function() {
   var ssid = val('wifi-ssid');
   var pass = val('wifi-pass');
-  if (!ssid) { showToast('SSID n\u00e3o pode ser vazio'); return; }
-  if (!confirm('Isso vai reiniciar o dispositivo. Continuar?')) return;
+  if (!ssid) { showToast(t('toast.ssidEmpty')); return; }
+  if (!confirm(t('toast.confirmRestart'))) return;
   fetch('/api/wifi', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ssid: ssid, password: pass})}).then(function(r){ return r.json(); }).then(function(r) {
-    showToast(r.ok ? 'Salvo! Reiniciando...' : ('Erro: ' + (r.error || '?')), 4000);
-  }).catch(function(){ showToast('Erro de rede'); });
+    showToast(r.ok ? t('toast.savedRestarting') : (t('toast.error') + (r.error || '?')), 4000);
+  }).catch(function(){ showToast(t('toast.networkError')); });
 });
 
 // ── Regenerate API key ───────────────────────────────────────────────────────
 document.getElementById('btn-regen-key').addEventListener('click', function() {
-  if (!confirm('Gerar nova chave de API? A chave atual ser\u00e1 invalidada.')) return;
+  if (!confirm(t('toast.confirmRegenKey'))) return;
   fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({regen_api_key: true})}).then(function(r){ return r.json(); }).then(function(r) {
     if (r.ok && r.api_key) {
       document.getElementById('api-key-box').textContent = r.api_key;
-      showToast('Nova chave gerada!');
+      showToast(t('toast.newKeyGenerated'));
     } else {
-      showToast('Erro: ' + (r.error || '?'));
+      showToast(t('toast.error') + (r.error || '?'));
     }
-  }).catch(function(){ showToast('Erro de rede'); });
+  }).catch(function(){ showToast(t('toast.networkError')); });
 });
 
 // ── Save API auth config ─────────────────────────────────────────────────────
@@ -562,11 +746,12 @@ document.getElementById('btn-save-api').addEventListener('click', function() {
   var body = { api_auth_enabled: checked('cfg-api-auth') };
   fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {
-    showToast(r.ok ? 'Salvo!' : ('Erro: ' + (r.error || '?')));
-  }).catch(function(){ showToast('Erro de rede'); });
+    showToast(r.ok ? t('toast.saved') : (t('toast.error') + (r.error || '?')));
+  }).catch(function(){ showToast(t('toast.networkError')); });
 });
 
 // ── Init ─────────────────────────────────────────────────────────────────────
+populateLangSelect();
 loadConfig();
 pollStatus();
 setInterval(pollStatus, 1000);

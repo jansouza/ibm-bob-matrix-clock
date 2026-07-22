@@ -19,6 +19,19 @@ static void _openW() { _prefs.begin(NVS_NAMESPACE, /*readOnly=*/false); }
 
 static void _close() { _prefs.end(); }
 
+// Single source of truth for accepted web UI language codes.
+// Add a new entry here (and a matching I18N dictionary in web_page.cpp)
+// to support another language.
+static const char* const _uiLanguages[] = { "en", "pt" };
+static const uint8_t _uiLanguagesCount = sizeof(_uiLanguages) / sizeof(_uiLanguages[0]);
+
+bool isUiLanguageValid(const char* code) {
+    for (uint8_t i = 0; i < _uiLanguagesCount; i++) {
+        if (strcmp(code, _uiLanguages[i]) == 0) return true;
+    }
+    return false;
+}
+
 // ─── loadConfig ───────────────────────────────────────────────────────────────
 
 void loadConfig() {
@@ -51,6 +64,12 @@ void loadConfig() {
     cfgDateEnabled     = _prefs.getBool(NVS_KEY_DATE_EN, true);
     cfgApiAuthEnabled  = _prefs.getBool(NVS_KEY_API_AUTH, false);
     _prefs.getString(NVS_KEY_API_KEY, cfgApiKey, API_KEY_LEN);
+
+    _prefs.getString(NVS_KEY_UI_LANGUAGE, cfgUiLanguage, UI_LANG_CODE_MAX);
+    if (cfgUiLanguage[0] == '\0' || !isUiLanguageValid(cfgUiLanguage)) {
+        strncpy(cfgUiLanguage, UI_LANG_DEFAULT, UI_LANG_CODE_MAX - 1);
+        cfgUiLanguage[UI_LANG_CODE_MAX - 1] = '\0';
+    }
 
     _close();
 
@@ -87,6 +106,8 @@ void saveConfig() {
     _prefs.putBool(NVS_KEY_DATE_EN,     cfgDateEnabled);
     _prefs.putBool(NVS_KEY_API_AUTH,    cfgApiAuthEnabled);
     _prefs.putString(NVS_KEY_API_KEY,   cfgApiKey);
+
+    _prefs.putString(NVS_KEY_UI_LANGUAGE, cfgUiLanguage);
 
     _close();
 }
@@ -132,6 +153,9 @@ void factoryReset() {
     cfgDateEnabled    = true;
     cfgApiKey[0]      = '\0';
     cfgApiAuthEnabled = false;
+
+    strncpy(cfgUiLanguage, UI_LANG_DEFAULT, UI_LANG_CODE_MAX - 1);
+    cfgUiLanguage[UI_LANG_CODE_MAX - 1] = '\0';
 }
 
 // ─── generateApiKey ───────────────────────────────────────────────────────────

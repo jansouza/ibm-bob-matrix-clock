@@ -152,30 +152,44 @@ Protect access to the web interface with HTTP Basic Auth. The user configures a 
 
 ## Sub-Task 4 — Web interface language in browser (Low urgency)
 
-**Status:** `[ ] pending`
+**Status:** `[x] done`
 
 ### Intent
 
-Add a floating language selector (PT / EN) in the web UI that translates all labels, texts and interface messages. The preference is saved in the browser's `localStorage` without sending anything to the ESP32. The display language (clock/date) remains independent.
+Add a language selector (EN / PT, extensible to more languages later) in the web UI that translates all labels, texts and interface messages. Unlike the original draft of this sub-task, the preference is **persisted on the ESP32** (NVS) via `POST /api/config`, not just in browser `localStorage` — so the choice survives across browsers/devices accessing the panel. Default language is **English (`en`)**. The display language (clock/date weekday-month names, `cfgLanguage`) is a separate, pre-existing setting and remains fully independent from this one.
+
+### Design decision
+
+- A new persisted field `cfgUiLanguage` (distinct from the existing `cfgLanguage`, which only controls the on-device clock/date locale) stores the web UI language code, e.g. `"en"`, `"pt"`.
+- The set of valid codes is **not hardcoded as a two-way if/else**: both firmware validation and the front-end dictionary lookup are structured as a small table/object keyed by language code, so adding a third language later means adding one entry, not branching logic.
+- On page load, the UI fetches `GET /api/config`, reads `ui_language`, and calls `applyLang()` with it (falling back to `en` if the stored/received value has no matching dictionary — this keeps unknown future values, or a value from a newer firmware, from breaking the page).
+- Changing the selector immediately re-renders the UI client-side (no reload) **and** persists the choice via `POST /api/config` with `{ "ui_language": "<code>" }`, so it's saved for future visits from any browser.
 
 ### Expected Outcomes
 
-- A PT | EN selector visible on all tabs (e.g.: top-right corner of the header).
-- When switching, all UI texts change instantly without reloading the page.
-- On the next page open, the chosen language is automatically restored from `localStorage`.
+- A language selector visible on all tabs (e.g.: top-right corner of the header), defaulting to English on a factory-reset device.
+- When switching, all UI texts change instantly without reloading the page, and the choice is saved to the device.
+- Reopening the panel (even from a different browser/computer) loads the previously saved language from the ESP32.
 - Translation coverage: all form labels, button texts, placeholders, toast feedback messages and tab titles.
+- Adding a new language in the future requires: one new dictionary object in `I18N`, one new `<option>` in the selector, and one new entry in the firmware's allowed-language table — no structural rework.
 
 ### Todo List
 
-1. **`web_page.h`** — Create a JavaScript `I18N` object with two dictionaries (`pt` and `en`) containing all UI strings.
-2. **`web_page.h`** — Implement function `applyLang(lang)` that traverses the DOM replacing `data-i18n="key"` with the text from the dictionary. Add `data-i18n` attributes to all text elements in the UI.
-3. **`web_page.h`** — Add PT | EN buttons in the header; on click, call `applyLang()` and save to `localStorage.setItem('lang', lang)`.
-4. **`web_page.h`** — In the `DOMContentLoaded` event, read `localStorage.getItem('lang')` (default `'pt'`) and call `applyLang()`.
+1. **`config.h`** — Add `#define UI_LANG_CODE_MAX 4` and `NVS_KEY_UI_LANGUAGE "ui_lang"`. Add `#define UI_LANG_DEFAULT "en"`. Define the allowed UI language list once as an array (e.g. `static const char* const UI_LANGUAGES[] = {"en", "pt"};`) so validation and future additions stay in one place.
+2. **`globals.h/cpp`** — Declare and define `char cfgUiLanguage[UI_LANG_CODE_MAX]` (default `UI_LANG_DEFAULT`). Keep this separate from `cfgLanguage` (display locale).
+3. **`persistence.cpp`** — In `loadConfig()`, read `cfgUiLanguage` from NVS with fallback `UI_LANG_DEFAULT`. In `saveConfig()`, persist `cfgUiLanguage`. In `factoryReset()`, reset it to `UI_LANG_DEFAULT`.
+4. **`web_routes.cpp`** — In `GET /api/config`, add `doc["ui_language"] = cfgUiLanguage`. In `POST /api/config`, accept field `ui_language`; validate it against the `UI_LANGUAGES` table (loop, not if/else chain) and reject unknown codes with 400; on success copy into `cfgUiLanguage` and mark `changed = true`.
+5. **`web_page.h`** — Create a JavaScript `I18N` object keyed by language code (`{ en: {...}, pt: {...} }`) containing all UI strings, structured so a new key can be added without touching lookup code.
+6. **`web_page.h`** — Implement function `applyLang(lang)` that falls back to `en` if `lang` isn't a known key in `I18N`, then traverses the DOM replacing `data-i18n="key"` elements with the matching dictionary text. Add `data-i18n` attributes to all text elements in the UI.
+7. **`web_page.h`** — Add a language `<select>` (or button group) in the header, populated from `Object.keys(I18N)` rather than hardcoded markup where practical, so the option list and the dictionary stay in sync. On change: call `applyLang()` immediately, then `POST /api/config` with `{ui_language: <code>}`.
+8. **`web_page.h`** — In `loadConfig()` (existing function that reads `GET /api/config`), read `c.ui_language` and call `applyLang(c.ui_language || 'en')` and set the selector's value to match.
 
 ### Relevant Context
 
-- [`smart-matrix-clock-esp32/web_page.h`](smart-matrix-clock-esp32/web_page.h) — the entire UI is in a single string literal; this sub-task modifies only this file.
-- No firmware, NVS, routes or globals changes — pure client-side JavaScript.
+- [`smart-matrix-clock-esp32/globals.h`](smart-matrix-clock-esp32/globals.h) — existing `cfgLanguage`/`LANG_DEFAULT` ("pt") controls only the display's day/month names via `locale_data`; do not reuse or repurpose this field for the web UI language.
+- [`smart-matrix-clock-esp32/web_routes.cpp`](smart-matrix-clock-esp32/web_routes.cpp) — `POST /api/config` field validation pattern to follow (see the existing `language` field handling as a precedent, but keep `ui_language` fully separate).
+- [`smart-matrix-clock-esp32/persistence.cpp`](smart-matrix-clock-esp32/persistence.cpp) — NVS load/save/factory-reset pattern to extend.
+- [`smart-matrix-clock-esp32/web_page.h`](smart-matrix-clock-esp32/web_page.h) — the entire UI is in a single string literal; most of this sub-task's front-end work lives here.
 
 ---
 
