@@ -171,9 +171,11 @@ It is **one-shot**: only the most recent alert is stored.
 
 ```json
 {
-  "message":     "Alert text",
-  "mode":        0,
-  "duration_ms": 5000
+  "message":         "Alert text",
+  "mode":            0,
+  "duration_ms":     5000,
+  "brightness":      15,
+  "scroll_speed_ms": 30
 }
 ```
 
@@ -181,26 +183,31 @@ It is **one-shot**: only the most recent alert is stored.
 |---|---|---|---|---|
 | `message` | string | **yes** | 1–127 chars | Text to display. Accepts UTF-8 (accents, special characters). Max 127 useful characters. May contain `[icon]` tags (see below). |
 | `mode` | int | no | 0–3 | Display mode (see table below). Default: previously configured value (default `0`) |
-| `duration_ms` | int | no | 1000–60000 | Duration in ms for Blink, Static, and Blink+Scroll modes. Ignored in pure Scroll mode. |
+| `duration_ms` | int | no | 1000–60000 | Duration in ms for Blink and Static modes. For Blink+Scroll, this is the **total** time for the repeating blink→scroll cycle. Ignored in pure Scroll mode. |
+| `brightness` | int | no | 0–15 | Temporary brightness override, active only while this alert is on screen. Reverts to the configured brightness (`POST /api/config`) once the alert ends. Omit to use the configured brightness. |
+| `scroll_speed_ms` | int | no | 10–200 | Temporary scroll speed override (ms per frame), active only while this alert is on screen. Reverts to the configured scroll speed once the alert ends. Omit to use the configured scroll speed. |
 
 #### Icon tags
 
-`message` may contain `[name]` tags, which are replaced with a CP437 special-glyph byte before being shown on the display (rendered directly by the MD_MAX72XX default font — no font changes required). Unknown tags are left as literal text.
+`message` may contain `[name]` tags, which are replaced with a CP437-range special-glyph byte before being shown on the display (rendered directly by the MD_MAX72XX default font — no font changes required). Unknown tags are left as literal text.
+
+This table is legibility-audited: every candidate glyph's actual pixel bitmap was checked at its real 8-row display size before being included. A few tags from an earlier version (`club`, `smile`, `note`) were removed because their glyphs are only one or two pixels apart from a different symbol and read as an ambiguous blob at that resolution rather than a recognizable icon. There is no `[bold]` tag — the display font has no emphasis/weight glyph at all, so no substitute was added.
 
 | Tag | Glyph |
 |---|---|
 | `[heart]` | ♥ |
 | `[diamond]` | ♦ |
-| `[club]` | ♣ |
 | `[spade]` | ♠ |
 | `[bullet]` | • |
-| `[smile]` | ☺ |
-| `[star]` | ★ |
+| `[star]` | ❄ (CP437 "snowflake", closest built-in glyph to a star) |
 | `[arrow_right]` | ▶ |
 | `[arrow_left]` | ◀ |
-| `[note]` | ♪ |
+| `[up]` | ↑ |
+| `[down]` | ↓ |
+| `[bell]` | ▲ solid up-triangle (no bell glyph exists in this font; closest usable shape) |
+| `[warn]` | ▼ solid down-triangle, opposite orientation from `[bell]` for visual distinction |
 
-Example: `"Warning [note] test"` displays as `Warning <note-glyph> test`.
+Example: `"Warning [warn] test"` displays as `Warning <warn-glyph> test`.
 
 #### Display modes (`mode`)
 
@@ -209,7 +216,7 @@ Example: `"Warning [note] test"` displays as `Warning <note-glyph> test`.
 | `0` | **Scroll** | Text scrolls from right to left. `duration_ms` limits total scroll time; if reached before the text finishes, the scroll is cut off. |
 | `1` | **Blink** | Text is displayed centred and blinks on/off every 500 ms for `duration_ms`. |
 | `2` | **Static** | Text is displayed centred and still for `duration_ms`. |
-| `3` | **Blink + Scroll** | **Phase 1:** text blinks on screen for `duration_ms`. **Phase 2:** after blinking, the full text scrolls once from right to left. Useful for grabbing attention first, then showing a long message. |
+| `3` | **Blink + Scroll** | `duration_ms` is the **total** time for the whole blink→scroll cycle, which **repeats** until it elapses. **Phase 1:** text blinks on screen for a fixed 5 s (or less, if the time left in the cycle is under 5 s). **Phase 2:** the remainder of the message scrolls once from right to left. When phase 2 finishes, if time remains in `duration_ms`, the cycle restarts at phase 1. Useful for grabbing attention first, then showing a long message, repeatedly. |
 
 > **Note on long text in Blink / Static / Blink+Scroll Phase 1:** the display has 32 LED columns (4 modules × 8 columns). With the default font, approximately 5–6 characters fit at once. Longer texts are truncated in static/blink display; use Scroll or Blink+Scroll to ensure the full message is readable.
 
@@ -237,15 +244,20 @@ curl -X POST http://192.168.1.42/api/alert \
   -H "Content-Type: application/json" \
   -d '{"message": "MEETING", "mode": 2, "duration_ms": 10000}'
 
-# Blink 5 s then scroll — long message
+# Blink 5 s, scroll, repeat the cycle for 60 s total — long message
 curl -X POST http://192.168.1.42/api/alert \
   -H "Content-Type: application/json" \
-  -d '{"message": "Critical temperature on server A3!", "mode": 3, "duration_ms": 5000}'
+  -d '{"message": "Critical temperature on server A3!", "mode": 3, "duration_ms": 60000}'
 
 # Message with an icon tag
 curl -X POST http://192.168.1.42/api/alert \
   -H "Content-Type: application/json" \
-  -d '{"message": "Warning [note] test"}'
+  -d '{"message": "Warning [warn] test"}'
+
+# Full brightness + faster scroll for a high-priority alert
+curl -X POST http://192.168.1.42/api/alert \
+  -H "Content-Type: application/json" \
+  -d '{"message": "FIRE DRILL", "mode": 1, "duration_ms": 10000, "brightness": 15, "scroll_speed_ms": 20}'
 ```
 
 #### Possible errors
@@ -257,6 +269,8 @@ curl -X POST http://192.168.1.42/api/alert \
 | 400 | `"message is empty"` | `message` field is an empty string |
 | 400 | `"mode must be 0-3"` | `mode` value out of range |
 | 400 | `"duration_ms must be 1000-60000"` | `duration_ms` value out of range |
+| 400 | `"brightness must be 0-15"` | `brightness` value out of range |
+| 400 | `"scroll_speed_ms must be 10-200"` | `scroll_speed_ms` value out of range |
 
 ---
 

@@ -47,11 +47,17 @@ static bool     _alertActive      = false;  // true while a static/blink alert i
 static uint32_t _alertStartMs     = 0;      // when the static/blink alert began
 static uint32_t _alertBlinkLast   = 0;      // last blink toggle timestamp
 static bool     _alertBlinkOn     = true;   // blink on/off state
+static uint32_t _alertPhase1Ms    = 0;      // duration of the current alert's blink/static phase (ms)
 
 // ── Blink+Scroll state ────────────────────────────────────────────────────────
-// Phase 1: blink the first screen of text for alertDurationMs.
-// Phase 2: scroll the full alertMessage text once.
-static bool     _blinkScrollPhase2 = false;  // true once we transition from blink to scroll
+// Phase 1: blink the first screen of text for ALERT_BLINK_SCROLL_PHASE1_MS
+//          (capped to whatever remains of the cycle's total duration).
+// Phase 2: scroll the remainder of alertMessage.
+// The whole blink→scroll cycle then repeats from phase 1 until alertDurationMs
+// (tracked from _alertCycleStartMs, not from each phase's own start) elapses.
+static bool     _blinkScrollPhase2  = false;  // true once we transition from blink to scroll
+static bool     _blinkScrollCycling = false;  // true while a repeating BLINK_SCROLL cycle is active
+static uint32_t _alertCycleStartMs  = 0;      // millis() when the overall BLINK_SCROLL cycle began
 
 // ── Fixed date display state ──────────────────────────────────────────────────
 // Shows "DAY DDMM" (or "DAY MMDD") all at once using the small 3×5 font.
@@ -86,7 +92,18 @@ static void _startScrollAt(const char* latin1Text, uint16_t speed, uint32_t dura
 
 // Start a non-blocking scroll at the configured scrollSpeed.
 static void _startScroll(const char* latin1Text, uint32_t durationMs = 0) {
-    _startScrollAt(latin1Text, (uint16_t)scrollSpeed, durationMs);
+    uint16_t speed = (alertScrollSpeedMs >= 0) ? (uint16_t)alertScrollSpeedMs : scrollSpeed;
+    _startScrollAt(latin1Text, speed, durationMs);
+}
+
+// Apply the alert's brightness override (if any) on top of currentBrightness.
+static void _applyAlertBrightness() {
+    if (alertBrightness >= 0) _display.setIntensity((uint8_t)alertBrightness);
+}
+
+// Restore the globally configured brightness after an alert ends.
+static void _restoreBrightness() {
+    if (alertBrightness >= 0) _display.setIntensity(currentBrightness);
 }
 
 // Number of columns that fit on the physical display (8 columns per module).
@@ -119,12 +136,30 @@ static void _printCentered(const char* text) {
 }
 
 // Begin a static or blink alert.
-static void _startTimedAlert() {
+// isCycleStart: true when this call begins a brand-new BLINK_SCROLL cycle
+// (as opposed to re-entering phase 1 after phase 2's scroll finished).
+static void _startTimedAlert(bool isCycleStart = true) {
     _alertActive       = true;
     _alertStartMs      = millis();
     _alertBlinkLast    = millis();
     _alertBlinkOn      = true;
     _blinkScrollPhase2 = false;
+
+    if (alertMode == ALERT_MODE_BLINK_SCROLL) {
+        if (isCycleStart) _alertCycleStartMs = _alertStartMs;
+        _blinkScrollCycling = true;
+        // Phase 1 gets a fixed slice, capped to whatever remains of the
+        // overall cycle budget (alertDurationMs, measured from cycle start).
+        uint32_t cycleElapsed = _alertStartMs - _alertCycleStartMs;
+        uint32_t cycleRemaining = (alertDurationMs > cycleElapsed) ? (alertDurationMs - cycleElapsed) : 0;
+        _alertPhase1Ms = (cycleRemaining < ALERT_BLINK_SCROLL_PHASE1_MS)
+                             ? cycleRemaining : ALERT_BLINK_SCROLL_PHASE1_MS;
+    } else {
+        _blinkScrollCycling = false;
+        _alertPhase1Ms = alertDurationMs;
+    }
+
+    _applyAlertBrightness();
     _printCentered(alertMessage);
 }
 
@@ -270,6 +305,21 @@ void displayTick() {
             _display.displayClear();
             _display.setTextAlignment(PA_CENTER);
 
+            // BLINK_SCROLL: if the overall cycle still has time left, go back
+            // to phase 1 (blink) instead of returning to the clock.
+            if (_blinkScrollCycling) {
+                uint32_t cycleElapsed = now - _alertCycleStartMs;
+                if (cycleElapsed < alertDurationMs) {
+                    _startTimedAlert(false);
+                    return;
+                }
+                _blinkScrollCycling = false;
+            }
+
+            _restoreBrightness();
+            alertBrightness    = -1;
+            alertScrollSpeedMs = -1;
+
             // In AP mode, immediately re-scroll the config message
             if (isApMode() && _apMsgBuf[0] != '\0') {
                 _startScrollAt(_apMsgBuf, AP_SCROLL_SPEED_MS);
@@ -283,7 +333,7 @@ void displayTick() {
     // ── Static / blink alert ──────────────────────────────────────────────────
     if (_alertActive) {
         uint32_t elapsed = now - _alertStartMs;
-        if (elapsed >= alertDurationMs) {
+        if (elapsed >= _alertPhase1Ms) {
             // Blink phase done — if BLINK_SCROLL, transition to scroll phase.
             // Only scroll the part of the message that wasn't already shown
             // (blinking) during phase 1.
@@ -292,16 +342,29 @@ void displayTick() {
                 size_t shown = _charsFittingOnScreen(alertMessage);
                 if (alertMessage[shown] != '\0') {
                     _alertActive = false;
-                    _startScroll(alertMessage + shown);
+                    // Remainder of the overall cycle budget goes to phase 2.
+                    uint32_t cycleElapsed = now - _alertCycleStartMs;
+                    uint32_t remaining = (alertDurationMs > cycleElapsed) ? (alertDurationMs - cycleElapsed) : 0;
+                    _startScroll(alertMessage + shown, remaining);
                     return;
                 }
-                // Whole message already fit on screen during the blink phase —
-                // nothing left to scroll, fall through to return to clock.
+                // Whole message already fits on screen — nothing to scroll.
+                // If the cycle still has time left, just restart phase 1 (re-blink)
+                // instead of ending the alert early.
+                uint32_t cycleElapsed = now - _alertCycleStartMs;
+                if (cycleElapsed < alertDurationMs) {
+                    _startTimedAlert(false);
+                    return;
+                }
+                _blinkScrollCycling = false;
             }
             // Alert duration expired — return to clock
             _alertActive = false;
             _display.displayClear();
             _display.setTextAlignment(PA_CENTER);
+            _restoreBrightness();
+            alertBrightness    = -1;
+            alertScrollSpeedMs = -1;
             _lastTimeStr[0] = '\0';
         } else if (alertMode == ALERT_MODE_BLINK || alertMode == ALERT_MODE_BLINK_SCROLL) {
             if (now - _alertBlinkLast >= ALERT_BLINK_PERIOD_MS) {
@@ -334,6 +397,7 @@ void displayTick() {
         alertPending = false;
         _blinkScrollPhase2 = false;
         if (alertMode == ALERT_MODE_SCROLL) {
+            _applyAlertBrightness();
             _startScroll(alertMessage, alertDurationMs);
         } else {
             // ALERT_MODE_BLINK, ALERT_MODE_STATIC, ALERT_MODE_BLINK_SCROLL all start timed

@@ -263,6 +263,21 @@ static void _handlePostAlert(AsyncWebServerRequest* req, uint8_t* data, size_t l
         alertDurationMs = (uint32_t)d;
     }
 
+    // Optional: temporary brightness/scroll-speed override, active only while
+    // this alert is on screen — restored to the configured value afterward.
+    alertBrightness = -1;
+    if (doc["brightness"].is<int>()) {
+        int v = doc["brightness"].as<int>();
+        if (v < 0 || v > 15) { _sendError(req, 400, "brightness must be 0-15"); return; }
+        alertBrightness = (int16_t)v;
+    }
+    alertScrollSpeedMs = -1;
+    if (doc["scroll_speed_ms"].is<int>()) {
+        int v = doc["scroll_speed_ms"].as<int>();
+        if (v < 10 || v > 200) { _sendError(req, 400, "scroll_speed_ms must be 10-200"); return; }
+        alertScrollSpeedMs = v;
+    }
+
     alertPending = true;
     _sendOk(req);
 }

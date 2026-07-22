@@ -23,6 +23,8 @@ extern bool     alertPending;         // set by HTTP handler, cleared by display
 extern char     alertMessage[];       // Latin-1 encoded, null-terminated
 extern uint8_t  alertMode;            // ALERT_MODE_SCROLL / BLINK / STATIC
 extern uint32_t alertDurationMs;      // duration for blink/static modes (ms)
+extern int16_t  alertBrightness;      // per-alert brightness override, 0–15; -1 = use currentBrightness
+extern int32_t  alertScrollSpeedMs;   // per-alert scroll speed override, ms; -1 = use scrollSpeed
 
 // ─── Slot rotation ────────────────────────────────────────────────────────────
 extern uint8_t  activeSlot;           // index of the currently active slot

@@ -247,6 +247,30 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
           <button class="btn btn-primary" id="btn-send-alert" style="width:100%" data-i18n="alert.send">Send</button>
         </div>
       </div>
+      <div class="toggle-row">
+        <span data-i18n="alert.override">Override brightness/speed for this alert</span>
+        <label class="toggle"><input type="checkbox" id="alert-override-en"/><span class="slider-toggle"></span></label>
+      </div>
+      <div id="alert-override-fields" style="display:none">
+        <div class="range-field">
+          <label><span data-i18n="clock.brightness">Brightness</span>: <span id="alert-brightness-val">15</span> / 15</label>
+          <div class="range-row">
+            <span style="font-size:12px;color:#8b949e">0</span>
+            <input id="alert-brightness" type="range" min="0" max="15" value="15"/>
+            <span style="font-size:12px;color:#8b949e">15</span>
+            <span class="range-val" id="alert-brightness-val-badge">15</span>
+          </div>
+        </div>
+        <div class="range-field">
+          <label><span data-i18n="clock.scrollSpeed">Scroll speed</span>: <span id="alert-speed-val">50</span> ms/frame</label>
+          <div class="range-row">
+            <span style="font-size:12px;color:#8b949e" data-i18n="clock.fast">Fast</span>
+            <input id="alert-scroll-speed" type="range" min="10" max="200" value="50"/>
+            <span style="font-size:12px;color:#8b949e" data-i18n="clock.slow">Slow</span>
+            <span class="range-val" id="alert-speed-val-badge">50</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -401,6 +425,7 @@ var I18N = {
     'alert.multiScreen': 'Message is longer than one screen — it will scroll',
     'alert.duration': 'Duration (seconds)',
     'alert.durationHint': 'Time shown on the display',
+    'alert.override': 'Override brightness/speed for this alert',
     'alert.send': 'Send',
     'weather.slotTitle': 'Weather Slot',
     'weather.enable': 'Enable weather slot',
@@ -460,6 +485,7 @@ var I18N = {
     'alert.multiScreen': 'Mensagem maior que uma tela &#8212; ir&#225; rolar (scroll)',
     'alert.duration': 'Dura&#231;&#227;o (segundos)',
     'alert.durationHint': 'Tempo de exibi&#231;&#227;o no display',
+    'alert.override': 'Sobrescrever brilho/velocidade para este alerta',
     'alert.send': 'Enviar',
     'weather.slotTitle': 'Slot de Clima',
     'weather.enable': 'Habilitar slot de clima',
@@ -557,6 +583,17 @@ document.getElementById('cfg-brightness').addEventListener('input', function() {
 document.getElementById('cfg-scroll-speed').addEventListener('input', function() {
   setText('speed-val', this.value);
   setText('speed-val-badge', this.value);
+});
+document.getElementById('alert-brightness').addEventListener('input', function() {
+  setText('alert-brightness-val', this.value);
+  setText('alert-brightness-val-badge', this.value);
+});
+document.getElementById('alert-scroll-speed').addEventListener('input', function() {
+  setText('alert-speed-val', this.value);
+  setText('alert-speed-val-badge', this.value);
+});
+document.getElementById('alert-override-en').addEventListener('change', function() {
+  document.getElementById('alert-override-fields').style.display = this.checked ? '' : 'none';
 });
 
 // ── Date enabled toggle ───────────────────────────────────────────────────────
@@ -667,14 +704,15 @@ document.getElementById('btn-save-clock').addEventListener('click', function() {
 var ALERT_ICONS = [
   { tag: 'heart',       glyph: '♥' },
   { tag: 'diamond',     glyph: '♦' },
-  { tag: 'club',        glyph: '♣' },
   { tag: 'spade',       glyph: '♠' },
   { tag: 'bullet',      glyph: '•' },
-  { tag: 'smile',       glyph: '☺' },
-  { tag: 'star',        glyph: '★' },
+  { tag: 'star',        glyph: '❄' },
   { tag: 'arrow_right', glyph: '▶' },
   { tag: 'arrow_left',  glyph: '◀' },
-  { tag: 'note',        glyph: '♪' }
+  { tag: 'up',          glyph: '↑' },
+  { tag: 'down',        glyph: '↓' },
+  { tag: 'bell',        glyph: '▲' },
+  { tag: 'warn',        glyph: '▼' }
 ];
 var ALERT_ICON_BY_TAG = {};
 ALERT_ICONS.forEach(function(i) { ALERT_ICON_BY_TAG[i.tag] = i.glyph; });
@@ -728,12 +766,13 @@ var FONT_CHAR_WIDTH = {
   123:4, 124:1, 125:4, 126:4
 };
 // CP437 control-byte glyph widths the firmware maps [name] icon tags to
-// (see ICON_TABLE in text_encoding.cpp) — these render as the low-ASCII
-// symbol glyphs (heart, spades, notes, ...), not as their Unicode preview
-// look-alike, so their real display width must be looked up separately.
+// (see _iconTags in text_encoding.cpp) — these render as the low-ASCII
+// symbol glyphs (heart, spade, arrows, ...), not as their Unicode preview
+// look-alike, so their real display width (read from MD_MAX72xx_font.cpp's
+// _sysfont[] table) must be looked up separately.
 var ICON_GLYPH_WIDTH = {
-  heart: 5, diamond: 5, club: 5, spade: 5, bullet: 4, smile: 5,
-  star: 5, arrow_right: 5, arrow_left: 5, note: 5
+  heart: 5, diamond: 5, spade: 5, bullet: 4,
+  star: 5, arrow_right: 5, arrow_left: 5, up: 5, down: 5, bell: 5, warn: 5
 };
 
 // Split msg into display tokens: each [name] icon tag becomes one token
@@ -817,6 +856,10 @@ document.getElementById('btn-send-alert').addEventListener('click', function() {
   var mode = parseInt(val('alert-mode'), 10);
   var dur  = parseInt(val('alert-duration'), 10) * 1000;
   var body = { message: msg, mode: mode, duration_ms: dur };
+  if (document.getElementById('alert-override-en').checked) {
+    body.brightness = parseInt(val('alert-brightness'), 10);
+    body.scroll_speed_ms = parseInt(val('alert-scroll-speed'), 10);
+  }
   fetch('/api/alert', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {
     showToast(r.ok ? t('toast.alertSent') : (t('toast.error') + (r.error || '?')));

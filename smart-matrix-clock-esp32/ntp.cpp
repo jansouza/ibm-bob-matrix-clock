@@ -9,6 +9,7 @@
 #include "ntp.h"
 #include "config.h"
 #include "globals.h"
+#include "persistence.h"
 
 #include <Arduino.h>
 #include <time.h>
@@ -61,7 +62,11 @@ void ntpTick() {
     if (now - _lastResync >= NTP_RESYNC_MS) {
         _lastResync = now;
         // configTime triggers a new SNTP request; ntpSynced stays true
-        // because the clock keeps its last-known value while re-syncing
+        // because the clock keeps its last-known value while re-syncing.
+        // configTime() resets TZ to UTC internally, so it must be re-applied
+        // right after — otherwise the display silently reverts to UTC every
+        // NTP_RESYNC_MS until the next config save or reboot.
         configTime(0, 0, cfgNtpServer);
+        applyTimezone();
     }
 }

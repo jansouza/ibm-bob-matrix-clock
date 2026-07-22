@@ -21,6 +21,8 @@ bool alertPending    = false;
 char alertMessage[MAX_ALERT_LEN] = {0};
 uint8_t  alertMode       = ALERT_MODE_SCROLL;
 uint32_t alertDurationMs = ALERT_DURATION_DEFAULT_MS;
+int16_t  alertBrightness    = -1;   // -1 = no override, use currentBrightness
+int32_t  alertScrollSpeedMs = -1;   // -1 = no override, use scrollSpeed
 
 // ─── Slot rotation ────────────────────────────────────────────────────────────
 uint8_t  activeSlot        = 0;

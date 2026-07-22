@@ -51,7 +51,13 @@ char* utf8ToLatin1(const char* src, char* dst, size_t maxLen) {
 
 // ─── Icon tags → CP437 special glyphs ────────────────────────────────────────
 // Tags are matched literally (case-sensitive, no nesting). Maps to control
-// bytes 0x01–0x1F, which MD_MAX72XX's default font renders as CP437 symbols.
+// bytes 0x01–0x1F, which MD_MAX72XX's default font (_sysfont[]) renders as
+// special symbols. This table is legibility-audited: each candidate glyph's
+// actual pixel bitmap was decoded from MD_MAX72xx_font.cpp and checked at
+// its real 8-row size before being included. Glyphs that decode to
+// ambiguous blobs at that resolution (e.g. the two smiley faces, the two
+// music notes, male/female signs, the block/shading fills) are deliberately
+// left out — no matter how tempting the CP437 name looks on paper.
 
 struct IconTag {
     const char* name;
@@ -61,14 +67,15 @@ struct IconTag {
 static const IconTag _iconTags[] = {
     { "heart",       0x03 },
     { "diamond",     0x04 },
-    { "club",        0x05 },
     { "spade",       0x06 },
     { "bullet",      0x07 },
-    { "smile",       0x01 },
     { "star",        0x0F },
     { "arrow_right", 0x10 },
     { "arrow_left",  0x11 },
-    { "note",        0x0E },
+    { "up",          0x18 },
+    { "down",        0x19 },
+    { "bell",        0x1E },
+    { "warn",        0x1F },
 };
 static const size_t _iconTagCount = sizeof(_iconTags) / sizeof(_iconTags[0]);
 

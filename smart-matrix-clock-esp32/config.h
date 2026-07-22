@@ -74,10 +74,11 @@
 #define ALERT_MODE_SCROLL       0   // scroll text left (original behaviour)
 #define ALERT_MODE_BLINK        1   // blink text on/off for alertDurationMs
 #define ALERT_MODE_STATIC       2   // show text static for alertDurationMs
-#define ALERT_MODE_BLINK_SCROLL 3   // blink first screen for alertDurationMs, then scroll remainder
+#define ALERT_MODE_BLINK_SCROLL 3   // blink first screen, then scroll remainder, repeating the cycle; alertDurationMs is the TOTAL for the whole repeating cycle
 
 #define ALERT_DURATION_DEFAULT_MS  5000UL   // default static/blink duration (ms)
 #define ALERT_BLINK_PERIOD_MS       500     // blink toggle period (ms)
+#define ALERT_BLINK_SCROLL_PHASE1_MS 5000UL // fixed phase-1 (blink) duration for ALERT_MODE_BLINK_SCROLL (ms)
 
 // ─── NVS namespace and keys ───────────────────────────────────────────────────
 #define NVS_NAMESPACE       "clk"

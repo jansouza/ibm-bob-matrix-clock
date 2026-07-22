@@ -29,6 +29,18 @@ Arduino/ESP32 firmware for a MAX7219 LED matrix clock with WiFi, web panel and R
 
 ---
 
+## Screenshots
+
+| Clock | Alert |
+|---|---|
+| ![Clock slot](assets/screenshot_clock.png) | ![Alert slot](assets/screenshot_alert.png) |
+
+| Weather | Quotes |
+|---|---|
+| ![Weather slot](assets/screenshot_weather.png) | ![Quotes slot](assets/screenshot_quotes.png) |
+
+---
+
 ## Hardware
 
 | Component | Detail |
