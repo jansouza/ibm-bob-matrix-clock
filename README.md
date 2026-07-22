@@ -26,7 +26,6 @@ Arduino/ESP32 firmware for a MAX7219 LED matrix clock with WiFi, web panel and R
 - **NVS persistence** — settings survive reboots via ESP32 `Preferences`
 - **Setup AP** — when no WiFi credentials are saved, automatically opens `SmartMatrixClock-Setup` AP
 - **Factory reset** — BOOT button (GPIO 0) held at power-on wipes all settings
-- **API authentication** — optional key (`X-API-Key`) on write endpoints (`POST`)
 
 ---
 
@@ -104,25 +103,22 @@ arduino-cli core install esp32:esp32
 ## REST API
 
 All endpoints are served directly by the ESP32 on port **80**.
-Authentication via `X-API-Key` is optional (disabled by default). When enabled, only **write** endpoints require the header — read endpoints used by the web panel remain always open.
+No authentication is required on any endpoint in this version — anyone on the same network as the device can call them. An API-key mechanism was implemented and later removed after it locked the web panel out of its own write actions; see [`docs/enhancements-plan.md`](docs/enhancements-plan.md) (Sub-Task 3) for the planned replacement.
 
-| Method | Route | Auth¹ | Description |
-|---|---|---|---|
-| `GET` | `/` | — | Web panel (self-contained HTML) |
-| `GET` | `/api/status` | — | Current time, active slot, NTP synced, SSID, IP |
-| `GET` | `/api/config` | — | All current settings (JSON) |
-| `GET` | `/api/timezones` | — | List of available IANA timezones |
-| `POST` | `/api/config` | ✓ | Update settings |
-| `POST` | `/api/alert` | ✓ | Send an alert message to the display |
-| `POST` | `/api/wifi` | ✓ | Save new WiFi credentials and reboot |
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/` | Web panel (self-contained HTML) |
+| `GET` | `/api/status` | Current time, active slot, NTP synced, SSID, IP |
+| `GET` | `/api/config` | All current settings (JSON) |
+| `GET` | `/api/timezones` | List of available IANA timezones |
+| `POST` | `/api/config` | Update settings |
+| `POST` | `/api/alert` | Send an alert message to the display |
+| `POST` | `/api/wifi` | Save new WiFi credentials and reboot |
 
-¹ Requires header `X-API-Key: <key>` only when authentication is enabled in the **API** tab of the web panel.
-
-**Example — send alert with authentication:**
+**Example — send alert:**
 ```bash
 curl -X POST http://<ip>/api/alert \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: <your-key>" \
   -d '{"message": "Deploy complete!"}'
 ```
 

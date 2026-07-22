@@ -1,5 +1,13 @@
 #pragma once
 
+/*
+ * Smart Matrix Clock
+ * Copyright (c) 2026 Jan Souza
+ *
+ * Licensed under the MIT License. See the LICENSE file
+ * in the project root for full license information.
+ */
+
 // ─── Hardware — SPI pins (VSPI defaults) ──────────────────────────────────────
 #define PIN_CLK     18   // VSPI CLK
 #define PIN_DATA    23   // VSPI MOSI
@@ -71,10 +79,6 @@
 #define ALERT_DURATION_DEFAULT_MS  5000UL   // default static/blink duration (ms)
 #define ALERT_BLINK_PERIOD_MS       500     // blink toggle period (ms)
 
-// ─── API authentication ───────────────────────────────────────────────────────
-#define API_KEY_LEN   33    // 32 hex chars + null terminator
-#define API_KEY_HEADER "X-API-Key"
-
 // ─── NVS namespace and keys ───────────────────────────────────────────────────
 #define NVS_NAMESPACE       "clk"
 
@@ -95,8 +99,6 @@
 #define NVS_KEY_DATE_EN     "date_en"
 #define NVS_KEY_ALERT_MODE  "alert_mode"
 #define NVS_KEY_ALERT_DUR   "alert_dur"
-#define NVS_KEY_API_KEY     "api_key"
-#define NVS_KEY_API_AUTH    "api_auth"
 #define NVS_KEY_UI_LANGUAGE "ui_lang"
 
 // ─── Restart ──────────────────────────────────────────────────────────────────

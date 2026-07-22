@@ -1,3 +1,11 @@
+/*
+ * Smart Matrix Clock
+ * Copyright (c) 2026 Jan Souza
+ *
+ * Licensed under the MIT License. See the LICENSE file
+ * in the project root for full license information.
+ */
+
 #include "globals.h"
 #include "config.h"
 
@@ -27,6 +35,4 @@ char     cfgWifiSsid[WIFI_SSID_MAX]     = {0};
 char     cfgWifiPass[WIFI_PASS_MAX]     = {0};
 uint32_t cfgDateIntervalMs              = DATE_INTERVAL_DEFAULT_MS;
 bool     cfgDateEnabled                 = true;
-char     cfgApiKey[API_KEY_LEN]         = {0};
-bool     cfgApiAuthEnabled              = false;
 char     cfgUiLanguage[UI_LANG_CODE_MAX] = UI_LANG_DEFAULT;

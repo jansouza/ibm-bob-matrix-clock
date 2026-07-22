@@ -17,7 +17,7 @@ smart-matrix-clock-esp32/
 ├── globals.h / globals.cpp ← shared state between modules
 ├── text_encoding.h / .cpp ← UTF-8 → Latin-1 / Latin-1 → UTF-8
 ├── locale_data.h / .cpp   ← day/month names by language, IANA→POSIX table
-├── persistence.h / .cpp   ← NVS load/save, apply timezone, generate API key
+├── persistence.h / .cpp   ← NVS load/save, apply timezone
 ├── display.h / .cpp       ← rendering, scroll, blink, slot manager
 ├── wifi_manager.h / .cpp  ← WiFi connection, setup AP, deferred restart
 ├── ntp.h / .cpp           ← NTP sync, periodic re-sync
@@ -88,7 +88,7 @@ smart-matrix-clock-esp32/
 - Create [`persistence.h`](smart-matrix-clock-esp32/persistence.h) / [`persistence.cpp`](smart-matrix-clock-esp32/persistence.cpp).
 - Implement `loadConfig()` — reads all NVS fields with fallback to defaults from `config.h`.
 - Implement `saveConfig()` — writes all changed fields.
-- Fields: brightness, scroll speed, timezone (IANA name), language, NTP server, date interval, API key, authentication enabled flag, WiFi credentials (SSID + password), lat/lon coordinates, ticker list (serialised), intervals and enabled flags per slot.
+- Fields: brightness, scroll speed, timezone (IANA name), language, NTP server, date interval, WiFi credentials (SSID + password), lat/lon coordinates, ticker list (serialised), intervals and enabled flags per slot.
 - Implement `applyTimezone(ianaName)` — translates IANA name → POSIX via `locale_data` and calls `setenv("TZ", ...)` + `tzset()`.
 - Implement `factoryReset()` — wipes the entire NVS namespace.
 
@@ -120,7 +120,7 @@ smart-matrix-clock-esp32/
 
 #### 3.1 — HTML/CSS/JS page
 - Create [`web_page.h`](smart-matrix-clock-esp32/web_page.h) with the `WEB_PAGE_HTML` string literal of the self-contained page.
-- The page has 5 tabs: **Clock** (timezone, language, NTP, date interval, brightness, scroll, live preview); **Weather** (enable, coordinates, intervals, unit); **Quotes** (enable, tickers, intervals); **Network** (current SSID, new credential form); **API** (auth toggle, show/regenerate key).
+- The page has 4 tabs: **Clock** (timezone, language, NTP, date interval, brightness, scroll, live preview); **Weather** (enable, coordinates, intervals, unit); **Quotes** (enable, tickers, intervals); **Network** (current SSID, new credential form). A 5th **API** tab (auth toggle, show/regenerate key) was implemented and later removed — see `docs/enhancements-plan.md`, Sub-Task 3.
 - Live preview in Clock tab: polling `GET /api/status` every 1 s, updates a `<div>` simulating the display.
 - All page communication with the ESP32 via `fetch()` to the API endpoints.
 
@@ -133,7 +133,7 @@ smart-matrix-clock-esp32/
   - `GET /api/status` → JSON with current time, active slot, `ntpSynced`, SSID, IP.
   - `GET /api/config` → JSON with all current settings.
   - `POST /api/config` → receives JSON, validates each field, calls `saveConfig()`, applies changes; responds before any reboot.
-  - `POST /api/alert` → receives `{"message": "...", "speed": N}`, validates, sets `alertMessage` and `alertPending = true`; protected by API key if authentication is enabled.
+  - `POST /api/alert` → receives `{"message": "...", "speed": N}`, validates, sets `alertMessage` and `alertPending = true`.
   - `GET /api/timezones` → JSON array with available IANA names.
   - `POST /api/wifi` → saves new credentials and schedules `scheduleRestart(1500)`.
 - Validations: brightness ranges (0–15), scroll speed (10–200 ms), language in allowed list, timezone in IANA table, lat/lon in valid ranges (-90..90, -180..180).

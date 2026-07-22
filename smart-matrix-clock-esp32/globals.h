@@ -1,4 +1,12 @@
 #pragma once
+
+/*
+ * Smart Matrix Clock
+ * Copyright (c) 2026 Jan Souza
+ *
+ * Licensed under the MIT License. See the LICENSE file
+ * in the project root for full license information.
+ */
 #include <stdint.h>
 #include <stdbool.h>
 #include "config.h"
@@ -29,6 +37,4 @@ extern char     cfgWifiSsid[];        // stored WiFi SSID (may be empty)
 extern char     cfgWifiPass[];        // stored WiFi password
 extern uint32_t cfgDateIntervalMs;    // how often date fires (ms); 0 = disabled
 extern bool     cfgDateEnabled;       // true = show date periodically
-extern char     cfgApiKey[];          // API key (32 hex chars + null)
-extern bool     cfgApiAuthEnabled;    // true = require X-API-Key header on every endpoint
 extern char     cfgUiLanguage[];      // web panel UI language (e.g. "en", "pt") — independent of cfgLanguage

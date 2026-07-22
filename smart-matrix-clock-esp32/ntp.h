@@ -1,4 +1,12 @@
 #pragma once
+
+/*
+ * Smart Matrix Clock
+ * Copyright (c) 2026 Jan Souza
+ *
+ * Licensed under the MIT License. See the LICENSE file
+ * in the project root for full license information.
+ */
 #include <stdint.h>
 
 // Initialise NTP and start background time sync.

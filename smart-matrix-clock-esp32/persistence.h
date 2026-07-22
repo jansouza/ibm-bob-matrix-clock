@@ -1,4 +1,12 @@
 #pragma once
+
+/*
+ * Smart Matrix Clock
+ * Copyright (c) 2026 Jan Souza
+ *
+ * Licensed under the MIT License. See the LICENSE file
+ * in the project root for full license information.
+ */
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -18,10 +26,6 @@ void applyTimezone();
 // Erase the entire NVS namespace ("clk") and reset RAM globals to defaults.
 // Does NOT restart the device — caller is responsible for that.
 void factoryReset();
-
-// Generate a new random 32-hex-char API key and store it in cfgApiKey[].
-// Does NOT save to NVS — call saveConfig() after if persistence is needed.
-void generateApiKey();
 
 // Returns true if `code` is one of the web UI languages the firmware knows
 // about (see the table in persistence.cpp). Add new languages there.

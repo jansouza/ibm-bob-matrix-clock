@@ -81,7 +81,7 @@ The display has 32 columns (4 FC16 modules × 8 columns). The approach of mixing
 
 ## Sub-Task 2 — Icons/symbols in alert messages (Medium urgency)
 
-**Status:** `[ ] pending`
+**Status:** `[x] done`
 
 ### Intent
 
@@ -121,9 +121,15 @@ CP437 characters are mapped to MD_MAX72XX font indices (control characters 0x01�
 
 Protect access to the web interface with HTTP Basic Auth. The user configures a password (no username field, or fixed username `admin`) in the panel, and the ESP32 validates the `Authorization: Basic <base64>` header on all routes except the initial configuration route. Protection is optional (off by default) and can be disabled from the panel.
 
+### Design lesson from the removed API-key attempt
+
+A previous attempt at this used a custom `X-API-Key` header (`cfgApiAuthEnabled` / `cfgApiKey`, checked via `_checkApiKey()` in `web_routes.cpp`). It was implemented and later **removed** because the built-in web panel's own JavaScript never attached the header on any of its `fetch()` calls — as soon as a user enabled auth from the panel's own toggle, every subsequent POST from the panel itself (including that same toggle's save button, and "Send alert") started returning `401 Unauthorized`, locking the panel out of itself. There was also no place in the UI to persist the key for reuse (it was only shown once, on demand, for copying into external tools like `curl`).
+
+**Takeaway for this sub-task:** any new auth mechanism must cover the web panel's own requests, not just external/programmatic callers. HTTP Basic Auth sidesteps the original failure mode because the browser itself caches and resends the `Authorization` header automatically once the user enters credentials in the native prompt — no JS-side header plumbing is required. Do not reintroduce a custom header scheme without also wiring the panel's `fetch()` calls to send it.
+
 ### Expected Outcomes
 
-- A "Protect web interface" toggle and password field in the API tab (or new Security tab) of the panel.
+- A "Protect web interface" toggle and password field in a new Security tab of the panel (the previous API tab was removed along with the API-key attempt — see the design lesson above).
 - When active, any access to `/` or API routes responds with `401 Unauthorized` with header `WWW-Authenticate: Basic realm="SmartMatrix"` if the credential header is absent or incorrect.
 - The browser displays the native HTTP Basic Auth login box.
 - The password is stored in NVS (plain text, given the local embedded context).
@@ -139,12 +145,11 @@ Protect access to the web interface with HTTP Basic Auth. The user configures a 
    - Compares with `cfgWebPassword` (username ignored or fixed `admin`).
    - Returns `true` if authorised or if `cfgWebAuthEnabled == false`.
    - On routes `GET /`, `GET /api/config`, `POST /api/config`, `POST /api/alert`, `GET /api/status`, `POST /api/wifi`: call `_checkBasicAuth()` at the start; if false, respond 401.
-5. **`web_page.h`** — In the API tab, add a "Protect web interface" toggle and password field; reads/writes via `POST /api/config` with fields `web_auth_enabled` and `web_password`.
+5. **`web_page.h`** — In a new Security tab, add a "Protect web interface" toggle and password field; reads/writes via `POST /api/config` with fields `web_auth_enabled` and `web_password`.
 
 ### Relevant Context
 
 - [`smart-matrix-clock-esp32/web_routes.cpp`](smart-matrix-clock-esp32/web_routes.cpp) — location where the auth check must be added.
-- The existing API key authentication (`cfgApiAuthEnabled`, `cfgApiKey`) follows a similar pattern — reuse the same header check pattern.
 - ESPAsyncWebServer provides `request->hasHeader()` and `request->getHeader()` to read HTTP headers.
 - Base64 decode: use the built-in Arduino ESP32 `base64` library (`#include <base64.h>`).
 
@@ -236,7 +241,7 @@ Incorporate the following improvements into the product roadmap, all compatible 
 
 | # | Improvement | Rationale |
 |---|---|---|
-| 6a | **Live alert preview** | The current preview in the Clock tab simulates the display. Add a preview in the Alert tab that shows the formatted text (with resolved icons) before sending |
+| 6a `[x] done` | **Live alert preview** | The current preview in the Clock tab simulates the display. Add a preview in the Alert tab that shows the formatted text (with resolved icons) before sending |
 | 6b | **Automatic brightness by time of day** | Automatically reduce brightness at night (e.g.: 23h–7h) to avoid disturbance. Configurable: start/end time and night brightness level |
 | 6c | **OTA (Over-The-Air) firmware update** | `POST /api/ota` endpoint accepts a `.bin` file, writes via ESP32 `Update.h`. Reduces the need for a USB cable for updates |
 | 6d | **Alert history** | Maintain a ring buffer of the last N received alerts (timestamp + text). Exposed via `GET /api/alerts/history`. Useful for debugging and auditing |

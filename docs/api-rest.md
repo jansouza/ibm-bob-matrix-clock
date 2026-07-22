@@ -18,21 +18,6 @@ Base URL: `http://<DEVICE_IP>`
 
 ---
 
-## Authentication
-
-When API key authentication is enabled, **every endpoint** requires the following header:
-
-```
-X-API-Key: <32-hex-character key>
-```
-
-The key is managed from the **API** tab in the web interface.  
-When authentication is disabled (default), all endpoints are open.
-
-> Any request missing or providing an invalid key returns **401 Unauthorized** while authentication is enabled.
-
----
-
 ## Endpoints
 
 ### `GET /`
@@ -97,8 +82,6 @@ Returns the full persisted configuration.
 }
 ```
 
-> **Note:** the `api_key` field is intentionally omitted from this response for security. The key is only visible in the web interface (API tab).
-
 ---
 
 ### `POST /api/config`
@@ -158,12 +141,6 @@ curl -X POST http://192.168.1.42/api/config \
 curl -X POST http://192.168.1.42/api/config \
   -H "Content-Type: application/json" \
   -d '{"date_enabled": true, "date_interval_ms": 60000}'
-
-# With authentication enabled
-curl -X POST http://192.168.1.42/api/config \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: a3f8c21d9e054b67abcdef1234567890" \
-  -d '{"brightness": 5}'
 ```
 
 #### Possible errors
@@ -179,7 +156,6 @@ curl -X POST http://192.168.1.42/api/config \
 | 400 | `"date_interval_ms out of range"` | Value outside 5000–300000 ms |
 | 400 | `"weather_display_ms out of range"` | Value outside 5000–300000 ms |
 | 400 | `"quotes_display_ms out of range"` | Value outside 5000–300000 ms |
-| 401 | `"Unauthorized: invalid or missing API key"` | Key missing or invalid (when auth is enabled) |
 
 ---
 
@@ -203,9 +179,28 @@ It is **one-shot**: only the most recent alert is stored.
 
 | Field | Type | Required | Range | Description |
 |---|---|---|---|---|
-| `message` | string | **yes** | 1–127 chars | Text to display. Accepts UTF-8 (accents, special characters). Max 127 useful characters. |
+| `message` | string | **yes** | 1–127 chars | Text to display. Accepts UTF-8 (accents, special characters). Max 127 useful characters. May contain `[icon]` tags (see below). |
 | `mode` | int | no | 0–3 | Display mode (see table below). Default: previously configured value (default `0`) |
 | `duration_ms` | int | no | 1000–60000 | Duration in ms for Blink, Static, and Blink+Scroll modes. Ignored in pure Scroll mode. |
+
+#### Icon tags
+
+`message` may contain `[name]` tags, which are replaced with a CP437 special-glyph byte before being shown on the display (rendered directly by the MD_MAX72XX default font — no font changes required). Unknown tags are left as literal text.
+
+| Tag | Glyph |
+|---|---|
+| `[heart]` | ♥ |
+| `[diamond]` | ♦ |
+| `[club]` | ♣ |
+| `[spade]` | ♠ |
+| `[bullet]` | • |
+| `[smile]` | ☺ |
+| `[star]` | ★ |
+| `[arrow_right]` | ▶ |
+| `[arrow_left]` | ◀ |
+| `[note]` | ♪ |
+
+Example: `"Warning [note] test"` displays as `Warning <note-glyph> test`.
 
 #### Display modes (`mode`)
 
@@ -227,7 +222,7 @@ It is **one-shot**: only the most recent alert is stored.
 #### Examples
 
 ```bash
-# Simple scrolling alert (no auth)
+# Simple scrolling alert
 curl -X POST http://192.168.1.42/api/alert \
   -H "Content-Type: application/json" \
   -d '{"message": "Door open!"}'
@@ -247,11 +242,10 @@ curl -X POST http://192.168.1.42/api/alert \
   -H "Content-Type: application/json" \
   -d '{"message": "Critical temperature on server A3!", "mode": 3, "duration_ms": 5000}'
 
-# With authentication enabled
+# Message with an icon tag
 curl -X POST http://192.168.1.42/api/alert \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: a3f8c21d9e054b67abcdef1234567890" \
-  -d '{"message": "Deploy done", "mode": 0}'
+  -d '{"message": "Warning [note] test"}'
 ```
 
 #### Possible errors
@@ -263,7 +257,6 @@ curl -X POST http://192.168.1.42/api/alert \
 | 400 | `"message is empty"` | `message` field is an empty string |
 | 400 | `"mode must be 0-3"` | `mode` value out of range |
 | 400 | `"duration_ms must be 1000-60000"` | `duration_ms` value out of range |
-| 401 | `"Unauthorized: invalid or missing API key"` | Header `X-API-Key` missing or invalid (when auth is enabled) |
 
 ---
 
@@ -330,12 +323,6 @@ curl -X POST http://192.168.1.42/api/wifi \
 curl -X POST http://192.168.1.42/api/wifi \
   -H "Content-Type: application/json" \
   -d '{"ssid": "OpenNetwork"}'
-
-# With authentication enabled
-curl -X POST http://192.168.1.42/api/wifi \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: a3f8c21d9e054b67abcdef1234567890" \
-  -d '{"ssid": "MyNetwork", "password": "my-password"}'
 ```
 
 #### Possible errors
@@ -346,7 +333,6 @@ curl -X POST http://192.168.1.42/api/wifi \
 | 400 | `"Missing 'ssid' field"` | `ssid` field absent |
 | 400 | `"ssid invalid length"` | Empty SSID or longer than 32 chars |
 | 400 | `"password too long"` | Password longer than 64 chars |
-| 401 | `"Unauthorized: invalid or missing API key"` | Key missing or invalid (when auth is enabled) |
 
 ---
 
@@ -378,15 +364,14 @@ Connect to this network and open `http://192.168.4.1` to configure WiFi via the 
 
 ## Endpoint summary
 
-| Method | Endpoint | Auth required¹ | Description |
-|---|---|---|---|
-| GET | `/` | — | Web interface |
-| GET | `/api/status` | — | Real-time operational state |
-| GET | `/api/config` | — | Read persisted configuration |
-| POST | `/api/config` | ✓ | Update configuration |
-| POST | `/api/alert` | ✓ | Send an alert message to the display |
-| GET | `/api/timezones` | — | List of supported timezones |
-| POST | `/api/wifi` | ✓ | Save WiFi credentials and reboot |
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | Web interface |
+| GET | `/api/status` | Real-time operational state |
+| GET | `/api/config` | Read persisted configuration |
+| POST | `/api/config` | Update configuration |
+| POST | `/api/alert` | Send an alert message to the display |
+| GET | `/api/timezones` | List of supported timezones |
+| POST | `/api/wifi` | Save WiFi credentials and reboot |
 
-¹ Authentication is required only when it is enabled via the web interface API tab. When disabled (default), all endpoints are open.
-`GET /`, `GET /api/status`, `GET /api/config`, and `GET /api/timezones` are always open — they are used by the built-in web interface and carry no sensitive write operations.
+> **Note:** none of the endpoints currently require authentication — anyone on the same network as the device can call them. An API-key mechanism was implemented and later removed because it broke the web interface's own write actions (see [`docs/enhancements-plan.md`](enhancements-plan.md), Sub-Task 3, for the planned replacement).

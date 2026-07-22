@@ -1,3 +1,11 @@
+/*
+ * Smart Matrix Clock
+ * Copyright (c) 2026 Jan Souza
+ *
+ * Licensed under the MIT License. See the LICENSE file
+ * in the project root for full license information.
+ */
+
 #include "web_routes.h"
 #include "config.h"
 #include "globals.h"
@@ -30,18 +38,6 @@ static void _sendError(AsyncWebServerRequest* req, int code, const char* msg) {
     String body;
     serializeJson(doc, body);
     req->send(code, "application/json", body);
-}
-
-// Validate API key header when authentication is enabled.
-// Returns true if the request should be allowed, false if rejected (response already sent).
-static bool _checkApiKey(AsyncWebServerRequest* req) {
-    if (!cfgApiAuthEnabled) return true;
-    if (req->hasHeader(API_KEY_HEADER)) {
-        const String& hdr = req->header(API_KEY_HEADER);
-        if (hdr == cfgApiKey) return true;
-    }
-    _sendError(req, 401, "Unauthorized: invalid or missing API key");
-    return false;
 }
 
 // ─── GET / ────────────────────────────────────────────────────────────────────
@@ -94,8 +90,6 @@ static void _handleGetConfig(AsyncWebServerRequest* req) {
     doc["ntp_server"]       = cfgNtpServer;
     doc["date_interval_ms"] = cfgDateIntervalMs;
     doc["date_enabled"]     = cfgDateEnabled;
-    doc["api_auth_enabled"] = cfgApiAuthEnabled;
-    // api_key is intentionally omitted from GET /api/config — use the API tab in the web UI
     doc["ui_language"]      = cfgUiLanguage;
 
     doc["weather_enabled"]    = slotEnabled[2];
@@ -121,8 +115,6 @@ static void _handlePostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t 
                               size_t index, size_t total) {
     // Accumulate body chunks (ESPAsyncWebServer calls this handler per chunk)
     (void)index; (void)total;
-
-    if (!_checkApiKey(req)) return;
 
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, data, len);
@@ -197,12 +189,6 @@ static void _handlePostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t 
         changed = true;
     }
 
-    // ── api_auth_enabled ──────────────────────────────────────────────────────
-    if (doc["api_auth_enabled"].is<bool>()) {
-        cfgApiAuthEnabled = doc["api_auth_enabled"].as<bool>();
-        changed = true;
-    }
-
     // ── ui_language ───────────────────────────────────────────────────────────
     if (doc["ui_language"].is<const char*>()) {
         const char* lang = doc["ui_language"].as<const char*>();
@@ -212,21 +198,6 @@ static void _handlePostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t 
         strncpy(cfgUiLanguage, lang, UI_LANG_CODE_MAX - 1);
         cfgUiLanguage[UI_LANG_CODE_MAX - 1] = '\0';
         changed = true;
-    }
-
-    // ── regen_api_key ─────────────────────────────────────────────────────────
-    if (doc["regen_api_key"].is<bool>() && doc["regen_api_key"].as<bool>()) {
-        generateApiKey();
-        changed = true;
-        // Return new key in response
-        JsonDocument resp;
-        resp["ok"]      = true;
-        resp["api_key"] = cfgApiKey;
-        saveConfig();
-        String body;
-        serializeJson(resp, body);
-        req->send(200, "application/json", body);
-        return;
     }
 
     // ── weather_enabled ───────────────────────────────────────────────────────
@@ -263,8 +234,6 @@ static void _handlePostAlert(AsyncWebServerRequest* req, uint8_t* data, size_t l
                              size_t index, size_t total) {
     (void)index; (void)total;
 
-    if (!_checkApiKey(req)) return;
-
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, data, len);
     if (err) { _sendError(req, 400, "Invalid JSON"); return; }
@@ -276,8 +245,11 @@ static void _handlePostAlert(AsyncWebServerRequest* req, uint8_t* data, size_t l
     const char* utf8msg = doc["message"].as<const char*>();
     if (strlen(utf8msg) == 0) { _sendError(req, 400, "message is empty"); return; }
 
-    // Convert UTF-8 → Latin-1 before storing (display driver expects Latin-1)
-    utf8ToLatin1(utf8msg, alertMessage, MAX_ALERT_LEN);
+    // Convert UTF-8 → Latin-1, then resolve [icon] tags to CP437 special glyphs
+    // (display driver expects Latin-1, with control bytes as icon glyphs)
+    char latin1msg[MAX_ALERT_LEN];
+    utf8ToLatin1(utf8msg, latin1msg, MAX_ALERT_LEN);
+    expandIconTags(latin1msg, alertMessage, MAX_ALERT_LEN);
 
     // Optional: mode and duration (only relevant for non-scroll modes)
     if (doc["mode"].is<int>()) {
@@ -317,8 +289,6 @@ static void _handleGetTimezones(AsyncWebServerRequest* req) {
 static void _handlePostWifi(AsyncWebServerRequest* req, uint8_t* data, size_t len,
                             size_t index, size_t total) {
     (void)index; (void)total;
-
-    if (!_checkApiKey(req)) return;
 
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, data, len);

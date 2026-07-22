@@ -1,3 +1,11 @@
+/*
+ * Smart Matrix Clock
+ * Copyright (c) 2026 Jan Souza
+ *
+ * Licensed under the MIT License. See the LICENSE file
+ * in the project root for full license information.
+ */
+
 #include "persistence.h"
 #include "config.h"
 #include "globals.h"
@@ -5,7 +13,6 @@
 
 #include <Preferences.h>
 #include <Arduino.h>
-#include <esp_system.h>
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
@@ -62,8 +69,6 @@ void loadConfig() {
 
     cfgDateIntervalMs  = _prefs.getUInt(NVS_KEY_DATE_INT_MS, DATE_INTERVAL_DEFAULT_MS);
     cfgDateEnabled     = _prefs.getBool(NVS_KEY_DATE_EN, true);
-    cfgApiAuthEnabled  = _prefs.getBool(NVS_KEY_API_AUTH, false);
-    _prefs.getString(NVS_KEY_API_KEY, cfgApiKey, API_KEY_LEN);
 
     _prefs.getString(NVS_KEY_UI_LANGUAGE, cfgUiLanguage, UI_LANG_CODE_MAX);
     if (cfgUiLanguage[0] == '\0' || !isUiLanguageValid(cfgUiLanguage)) {
@@ -72,12 +77,6 @@ void loadConfig() {
     }
 
     _close();
-
-    // Generate a key on first boot if none stored
-    if (cfgApiKey[0] == '\0') {
-        generateApiKey();
-        saveConfig();
-    }
 }
 
 // ─── saveConfig ───────────────────────────────────────────────────────────────
@@ -104,8 +103,6 @@ void saveConfig() {
 
     _prefs.putUInt(NVS_KEY_DATE_INT_MS, cfgDateIntervalMs);
     _prefs.putBool(NVS_KEY_DATE_EN,     cfgDateEnabled);
-    _prefs.putBool(NVS_KEY_API_AUTH,    cfgApiAuthEnabled);
-    _prefs.putString(NVS_KEY_API_KEY,   cfgApiKey);
 
     _prefs.putString(NVS_KEY_UI_LANGUAGE, cfgUiLanguage);
 
@@ -151,22 +148,7 @@ void factoryReset() {
 
     cfgDateIntervalMs = DATE_INTERVAL_DEFAULT_MS;
     cfgDateEnabled    = true;
-    cfgApiKey[0]      = '\0';
-    cfgApiAuthEnabled = false;
 
     strncpy(cfgUiLanguage, UI_LANG_DEFAULT, UI_LANG_CODE_MAX - 1);
     cfgUiLanguage[UI_LANG_CODE_MAX - 1] = '\0';
-}
-
-// ─── generateApiKey ───────────────────────────────────────────────────────────
-
-void generateApiKey() {
-    uint8_t buf[16];
-    for (int i = 0; i < 16; i++) {
-        buf[i] = (uint8_t)(esp_random() & 0xFF);
-    }
-    for (int i = 0; i < 16; i++) {
-        snprintf(cfgApiKey + i * 2, 3, "%02x", buf[i]);
-    }
-    cfgApiKey[32] = '\0';
 }

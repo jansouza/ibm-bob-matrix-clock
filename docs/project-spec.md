@@ -194,7 +194,7 @@ Think about this from the start — it shapes everything else:
  after a short delay — so the HTTP response reaches the client first.
 - **Persist only what's needed to survive a restart**, and keep it small:
  brightness, scroll speed, clock settings (timezone, language, NTP
- server, date interval), API key + auth flag, saved WiFi credentials,
+ server, date interval), saved WiFi credentials,
  geographic coordinates (lat/lon) for weather, asset ticker list,
  per-slot rotation and external-data-refresh intervals, and each slot's
  enabled/disabled state. Use the platform's key-value storage (e.g.,
@@ -203,10 +203,11 @@ Think about this from the start — it shapes everything else:
  truncation and null termination; validate every REST/UI parameter
  (speed/brightness ranges, allowed timezone/language lists, etc.) before
  changing state.
-- **Optional API authentication**, only on the programmatic endpoint — the
- local web interface's own routes remain implicitly trusted (it is the
- configuration surface that manages the key itself). Verify the key
- before any state change.
+- **No authentication in this version.** All routes are open to anyone on
+ the same network as the device. An API-key mechanism was implemented and
+ later removed after it turned out to lock the web interface's own write
+ actions out of itself (see `docs/enhancements-plan.md`, Sub-Task 3, for
+ the planned replacement — HTTP Basic Auth on the whole panel).
 
 ## 5. Suggested module breakdown
 
@@ -228,9 +229,8 @@ giant sketch. One viable breakdown (the one used in this project):
  daylight saving, instead of a raw UTC offset).
 - **Settings persistence** — load/save all persisted fields, apply
  timezone changes (name → POSIX string → configure the library's TZ,
- making daylight saving automatic where applicable), generate/regenerate
- the API key, persist/connect with WiFi credentials, persist each
- rotation slot's settings.
+ making daylight saving automatic where applicable), persist/connect with
+ WiFi credentials, persist each rotation slot's settings.
 - **External data fetching** — checks, on every loop cycle, whether the
  Weather and Quotes refresh timers have fired; if so, performs the HTTP
  request with a short timeout, parses the JSON response, updates the
@@ -242,22 +242,19 @@ giant sketch. One viable breakdown (the one used in this project):
  tabs: **Clock** (timezone, language, NTP, date interval, brightness,
  scroll); **Weather** (enable/disable slot, coordinates, intervals,
  unit); **Quotes** (enable/disable slot, ticker list, intervals);
- **Network** (current connection info, WiFi credentials form); **API**
- (auth toggle, key display/regeneration). The Clock tab includes a live
- preview of the display with the current time.
+ **Network** (current connection info, WiFi credentials form). The Clock
+ tab includes a live preview of the display with the current time.
 - **Web/API routes** — an asynchronous HTTP server registering:
  - `GET /` — the interface page.
  - `GET /api/display` — the single REST endpoint that reads query
    parameters to set the message text, scroll speed, brightness, display
    submode, main mode, timezone, date on/off, date interval, and a single
-   "alert" message. It is the only route protected by the optional API
-   key.
+   "alert" message.
  - A pair of settings routes (`GET`/`POST`) for the web interface to
    read/write the same parameters, sharing validation logic with the
    REST endpoint instead of duplicating it.
- - Small JSON endpoints for: network/connection info, API auth status,
-   key regeneration, and a list of timezone names to populate the
-   interface's dropdown.
+ - Small JSON endpoints for: network/connection info and a list of
+   timezone names to populate the interface's dropdown.
  - Build every JSON response with a structured JSON library/builder —
    never concatenate JSON strings manually.
 
@@ -301,7 +298,7 @@ giant sketch. One viable breakdown (the one used in this project):
 Once the firmware exists, document (in files separate from this one):
 
 - REST API reference: every query parameter, type/range/allowed list,
- auth header, `curl` examples, and JSON response formats.
+ `curl` examples, and JSON response formats.
 - Wiring/hardware table (module pin → microcontroller pin).
 - Third-party integration examples (e.g., a home automation platform
  calling the REST endpoint in an automation).
@@ -317,8 +314,7 @@ out of scope for the first version:
 
 - Additional display slots beyond the four above.
 - Multiple queued alerts (v1 keeps only the most recent).
-- Any authentication beyond a single shared API key on the programmatic
- endpoint.
+- Any authentication on any endpoint.
 - OTA firmware updates or browser-based flashing (can be added later).
 - Time-of-day slot scheduling (e.g., showing quotes only during market
  hours).

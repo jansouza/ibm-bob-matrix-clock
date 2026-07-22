@@ -1,3 +1,11 @@
+/*
+ * Smart Matrix Clock
+ * Copyright (c) 2026 Jan Souza
+ *
+ * Licensed under the MIT License. See the LICENSE file
+ * in the project root for full license information.
+ */
+
 #include "web_page.h"
 
 // Raw-string literal R"=====(...)=====" so we can embed quotes, newlines, and
@@ -63,7 +71,13 @@ header span{font-size:12px;color:#8b949e;background:#21262d;
   font-size:28px;letter-spacing:.15em;padding:12px 20px;
   border-radius:4px;text-align:center;min-height:54px;
   display:flex;align-items:center;justify-content:center;
-  border:1px solid #30363d}
+  border:1px solid #30363d;overflow-wrap:anywhere}
+.preview-overflow-text{color:#6e7681}
+.icon-row{display:flex;flex-wrap:wrap;gap:6px}
+.icon-btn{background:#161b22;border:1px solid #30363d;color:#c9d1d9;
+  border-radius:4px;padding:6px 10px;font-size:16px;cursor:pointer;
+  min-width:36px;line-height:1}
+.icon-btn:hover{background:#21262d;border-color:#58a6ff}
 .status-bar{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;
   margin-bottom:16px;color:#8b949e}
 .status-bar span{display:flex;align-items:center;gap:4px}
@@ -125,7 +139,6 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
     <button class="tab" data-tab="weather">&#127780; <span data-i18n="tab.weather">Weather</span></button>
     <button class="tab" data-tab="quotes">&#128200; <span data-i18n="tab.quotes">Quotes</span></button>
     <button class="tab" data-tab="network">&#128246; <span data-i18n="tab.network">Network</span></button>
-    <button class="tab" data-tab="apikey">&#128273; <span data-i18n="tab.api">API</span></button>
   </div>
 
   <!-- ── CLOCK TAB ────────────────────────────────────────────────────── -->
@@ -205,6 +218,15 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
       <div class="field">
         <label data-i18n="alert.message">Message (max. 127 chars)</label>
         <input id="alert-msg" type="text" maxlength="127" data-i18n-ph="alert.placeholder" placeholder="Type a message..."/>
+      </div>
+      <div class="field">
+        <label data-i18n="alert.icons">Icons</label>
+        <div id="alert-icon-row" class="icon-row"></div>
+      </div>
+      <div class="field">
+        <label data-i18n="alert.preview">Preview</label>
+        <div class="preview" id="alert-preview">&nbsp;</div>
+        <div class="hint" id="alert-preview-overflow"></div>
       </div>
       <div class="row3">
         <div class="field">
@@ -336,30 +358,6 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
     </div>
   </div>
 
-  <!-- ── API TAB ──────────────────────────────────────────────────────── -->
-  <div class="panel" id="tab-apikey">
-    <div class="card">
-      <h2 data-i18n="api.authTitle">API Authentication</h2>
-      <div class="toggle-row">
-        <span data-i18n="api.requireKey">Require API key on <code>/api/*</code> endpoints</span>
-        <label class="toggle"><input type="checkbox" id="cfg-api-auth"/><span class="slider-toggle"></span></label>
-      </div>
-      <p style="margin-top:10px;font-size:13px;color:#8b949e" data-i18n="api.authHint">
-        When enabled, all write and state-reading requests must include the header
-        <code>X-API-Key: &lt;key&gt;</code>. The web interface and the endpoints
-        <code>GET /api/config</code> and <code>GET /api/timezones</code> remain accessible without authentication.
-      </p>
-    </div>
-    <div class="card">
-      <h2 data-i18n="api.keyTitle">API Key</h2>
-      <div class="key-box" id="api-key-box">...</div>
-      <div class="actions" style="margin-top:10px">
-        <button class="btn btn-danger" id="btn-regen-key" data-i18n="api.regenerate">Regenerate key</button>
-        <button class="btn btn-primary" id="btn-save-api" data-i18n="common.saveSettings">Save settings</button>
-      </div>
-    </div>
-  </div>
-
 </div><!-- /container -->
 
 <div class="toast" id="toast"></div>
@@ -376,7 +374,7 @@ var I18N = {
   en: {
     'status.ntp': 'NTP', 'status.slot': 'Slot', 'status.wifi': 'WiFi',
     'tab.clock': 'Clock', 'tab.alert': 'Alert', 'tab.weather': 'Weather',
-    'tab.quotes': 'Quotes', 'tab.network': 'Network', 'tab.api': 'API',
+    'tab.quotes': 'Quotes', 'tab.network': 'Network',
     'clock.preview': 'Live preview',
     'clock.timeAndTz': 'Time and Timezone',
     'clock.timezone': 'Timezone (IANA)',
@@ -398,6 +396,9 @@ var I18N = {
     'alert.modeBlink': '&#10022; Blink',
     'alert.modeStatic': '&#9632; Static',
     'alert.modeBlinkScroll': '&#10022;&#8618; Blink + Scroll',
+    'alert.icons': 'Icons',
+    'alert.preview': 'Preview',
+    'alert.multiScreen': 'Message is longer than one screen — it will scroll',
     'alert.duration': 'Duration (seconds)',
     'alert.durationHint': 'Time shown on the display',
     'alert.send': 'Send',
@@ -416,11 +417,6 @@ var I18N = {
     'network.newWifi': 'New WiFi network',
     'network.password': 'Password',
     'network.saveAndRestart': 'Save and restart',
-    'api.authTitle': 'API Authentication',
-    'api.requireKey': 'Require API key on <code>/api/*</code> endpoints',
-    'api.authHint': 'When enabled, all write and state-reading requests must include the header <code>X-API-Key: &lt;key&gt;</code>. The web interface and the endpoints <code>GET /api/config</code> and <code>GET /api/timezones</code> remain accessible without authentication.',
-    'api.keyTitle': 'API Key',
-    'api.regenerate': 'Regenerate key',
     'common.settings': 'Settings',
     'common.updateInterval': 'Update interval (minutes)',
     'common.displayInterval': 'Display time (seconds)',
@@ -432,14 +428,12 @@ var I18N = {
     'toast.alertSent': 'Alert sent!',
     'toast.ssidEmpty': 'SSID cannot be empty',
     'toast.confirmRestart': 'This will restart the device. Continue?',
-    'toast.savedRestarting': 'Saved! Restarting...',
-    'toast.confirmRegenKey': 'Generate a new API key? The current key will be invalidated.',
-    'toast.newKeyGenerated': 'New key generated!'
+    'toast.savedRestarting': 'Saved! Restarting...'
   },
   pt: {
     'status.ntp': 'NTP', 'status.slot': 'Slot', 'status.wifi': 'WiFi',
     'tab.clock': 'Rel&#243;gio', 'tab.alert': 'Alerta', 'tab.weather': 'Clima',
-    'tab.quotes': 'Cota&#231;&#245;es', 'tab.network': 'Rede', 'tab.api': 'API',
+    'tab.quotes': 'Cota&#231;&#245;es', 'tab.network': 'Rede',
     'clock.preview': 'Preview ao vivo',
     'clock.timeAndTz': 'Hora e Fuso',
     'clock.timezone': 'Fuso hor&#225;rio (IANA)',
@@ -461,6 +455,9 @@ var I18N = {
     'alert.modeBlink': '&#10022; Piscar',
     'alert.modeStatic': '&#9632; Est&#225;tico',
     'alert.modeBlinkScroll': '&#10022;&#8618; Piscar + Scroll',
+    'alert.icons': '&#205;cones',
+    'alert.preview': 'Pr&#233;-visualiza&#231;&#227;o',
+    'alert.multiScreen': 'Mensagem maior que uma tela &#8212; ir&#225; rolar (scroll)',
     'alert.duration': 'Dura&#231;&#227;o (segundos)',
     'alert.durationHint': 'Tempo de exibi&#231;&#227;o no display',
     'alert.send': 'Enviar',
@@ -479,11 +476,6 @@ var I18N = {
     'network.newWifi': 'Nova rede WiFi',
     'network.password': 'Senha',
     'network.saveAndRestart': 'Salvar e reiniciar',
-    'api.authTitle': 'Autentica&#231;&#227;o de API',
-    'api.requireKey': 'Exigir chave de API nos endpoints <code>/api/*</code>',
-    'api.authHint': 'Quando ativado, todas as requisi&#231;&#245;es de escrita e leitura de estado devem incluir o header <code>X-API-Key: &lt;chave&gt;</code>. A interface web e os endpoints <code>GET /api/config</code> e <code>GET /api/timezones</code> permanecem acess&#237;veis sem autentica&#231;&#227;o.',
-    'api.keyTitle': 'Chave de API',
-    'api.regenerate': 'Regenerar chave',
     'common.settings': 'Configura&#231;&#245;es',
     'common.updateInterval': 'Intervalo de atualiza&#231;&#227;o (minutos)',
     'common.displayInterval': 'Tempo de exibi&#231;&#227;o (segundos)',
@@ -495,9 +487,7 @@ var I18N = {
     'toast.alertSent': 'Alerta enviado!',
     'toast.ssidEmpty': 'SSID não pode ser vazio',
     'toast.confirmRestart': 'Isso vai reiniciar o dispositivo. Continuar?',
-    'toast.savedRestarting': 'Salvo! Reiniciando...',
-    'toast.confirmRegenKey': 'Gerar nova chave de API? A chave atual será invalidada.',
-    'toast.newKeyGenerated': 'Nova chave gerada!'
+    'toast.savedRestarting': 'Salvo! Reiniciando...'
   }
 };
 
@@ -524,6 +514,7 @@ function applyLang(lang) {
   });
   var sel = document.getElementById('ui-lang-select');
   if (sel) sel.value = currentLang;
+  if (typeof updateAlertPreview === 'function') updateAlertPreview();
 }
 
 // Populate the header language selector from the dictionaries available,
@@ -634,8 +625,6 @@ function loadConfig() {
     setVal('cfg-quotes-tickers', c.quotes_tickers || '');
     setVal('cfg-quotes-update', Math.round((c.quotes_update_ms || 600000) / 60000));
     setVal('cfg-quotes-display', Math.round((c.quotes_display_ms || 30000) / 1000));
-
-    setChecked('cfg-api-auth', c.api_auth_enabled);
   });
 }
 
@@ -671,6 +660,156 @@ document.getElementById('btn-save-clock').addEventListener('click', function() {
   }).catch(function(){ showToast(t('toast.networkError')); });
 });
 
+// ── Alert icon tags ────────────────────────────────────────────────────────────
+// Mirrors the firmware's icon table in text_encoding.cpp (expandIconTags()).
+// glyph = Unicode look-alike shown on the button and in the preview;
+// tag   = literal [name] inserted into the message text.
+var ALERT_ICONS = [
+  { tag: 'heart',       glyph: '♥' },
+  { tag: 'diamond',     glyph: '♦' },
+  { tag: 'club',        glyph: '♣' },
+  { tag: 'spade',       glyph: '♠' },
+  { tag: 'bullet',      glyph: '•' },
+  { tag: 'smile',       glyph: '☺' },
+  { tag: 'star',        glyph: '★' },
+  { tag: 'arrow_right', glyph: '▶' },
+  { tag: 'arrow_left',  glyph: '◀' },
+  { tag: 'note',        glyph: '♪' }
+];
+var ALERT_ICON_BY_TAG = {};
+ALERT_ICONS.forEach(function(i) { ALERT_ICON_BY_TAG[i.tag] = i.glyph; });
+
+function populateAlertIcons() {
+  var row = document.getElementById('alert-icon-row');
+  ALERT_ICONS.forEach(function(icon) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'icon-btn';
+    btn.textContent = icon.glyph;
+    btn.title = icon.tag;
+    btn.addEventListener('click', function() {
+      var input = document.getElementById('alert-msg');
+      var tagText = '[' + icon.tag + ']';
+      var start = input.selectionStart != null ? input.selectionStart : input.value.length;
+      var end = input.selectionEnd != null ? input.selectionEnd : input.value.length;
+      input.value = input.value.slice(0, start) + tagText + input.value.slice(end);
+      var caret = start + tagText.length;
+      input.focus();
+      input.setSelectionRange(caret, caret);
+      updateAlertPreview();
+    });
+    row.appendChild(btn);
+  });
+}
+
+// Resolve [name] tags to their preview glyph (or leave the literal tag if
+// unknown), same rule the firmware applies when resolving to CP437 bytes.
+function resolveAlertPreview(msg) {
+  return msg.replace(/\[([a-z_]+)\]/g, function(match, name) {
+    return ALERT_ICON_BY_TAG[name] !== undefined ? ALERT_ICON_BY_TAG[name] : match;
+  });
+}
+
+// Per-character pixel widths of the MD_MAX72XX system font (USE_NEW_FONT
+// table, ASCII 32-126), plus the 1px inter-character gap the display
+// hardware always inserts between glyphs. Mirrors _charsFittingOnScreen()
+// in display.cpp so the preview matches what the physical display actually
+// fits on one screen before it needs to scroll.
+var DISPLAY_WIDTH_PX = 32; // 4 chained 8x8 modules
+var FONT_CHAR_WIDTH = {
+  32:2, 33:1, 34:3, 35:5, 36:5, 37:5, 38:5, 39:1, 40:3, 41:3, 42:5, 43:5,
+  44:2, 45:4, 46:2, 47:5, 48:5, 49:3, 50:5, 51:5, 52:5, 53:5, 54:5, 55:5,
+  56:5, 57:5, 58:2, 59:2, 60:3, 61:4, 62:3, 63:5, 64:5, 65:5, 66:5, 67:5,
+  68:5, 69:5, 70:5, 71:5, 72:5, 73:3, 74:5, 75:5, 76:5, 77:5, 78:5, 79:5,
+  80:5, 81:5, 82:5, 83:5, 84:5, 85:5, 86:5, 87:5, 88:5, 89:5, 90:5, 91:3,
+  92:5, 93:3, 94:5, 95:4, 96:3, 97:4, 98:4, 99:4, 100:4, 101:4, 102:4,
+  103:4, 104:4, 105:1, 106:3, 107:4, 108:1, 109:5, 110:4, 111:4, 112:4,
+  113:4, 114:4, 115:4, 116:3, 117:4, 118:4, 119:5, 120:4, 121:4, 122:4,
+  123:4, 124:1, 125:4, 126:4
+};
+// CP437 control-byte glyph widths the firmware maps [name] icon tags to
+// (see ICON_TABLE in text_encoding.cpp) — these render as the low-ASCII
+// symbol glyphs (heart, spades, notes, ...), not as their Unicode preview
+// look-alike, so their real display width must be looked up separately.
+var ICON_GLYPH_WIDTH = {
+  heart: 5, diamond: 5, club: 5, spade: 5, bullet: 4, smile: 5,
+  star: 5, arrow_right: 5, arrow_left: 5, note: 5
+};
+
+// Split msg into display tokens: each [name] icon tag becomes one token
+// (rendered on the real display as a single glyph), every other character
+// is its own token. Keeps the tag-vs-rendered-width mapping correct so the
+// screen-fit calculation matches the firmware instead of measuring the
+// Unicode look-alike glyph used only for the on-screen preview.
+function tokenizeAlertMessage(msg) {
+  var tokens = [];
+  var re = /\[([a-z_]+)\]/g;
+  var lastIndex = 0, m;
+  while ((m = re.exec(msg)) !== null) {
+    for (var i = lastIndex; i < m.index; i++) tokens.push({ text: msg[i], width: charPixelWidth(msg[i]) });
+    var name = m[1];
+    if (ALERT_ICON_BY_TAG[name] !== undefined) {
+      tokens.push({ text: ALERT_ICON_BY_TAG[name], width: ICON_GLYPH_WIDTH[name] !== undefined ? ICON_GLYPH_WIDTH[name] : 5 });
+    } else {
+      for (var j = 0; j < m[0].length; j++) tokens.push({ text: m[0][j], width: charPixelWidth(m[0][j]) });
+    }
+    lastIndex = re.lastIndex;
+  }
+  for (var k = lastIndex; k < msg.length; k++) tokens.push({ text: msg[k], width: charPixelWidth(msg[k]) });
+  return tokens;
+}
+
+function charPixelWidth(ch) {
+  var code = ch.charCodeAt(0);
+  return FONT_CHAR_WIDTH[code] !== undefined ? FONT_CHAR_WIDTH[code] : 5;
+}
+
+// How many leading tokens fit within one display width.
+function tokensFittingOnScreen(tokens) {
+  var used = 0, count = 0;
+  for (var i = 0; i < tokens.length; i++) {
+    var w = tokens[i].width + (count > 0 ? 1 : 0);
+    if (used + w > DISPLAY_WIDTH_PX) break;
+    used += w;
+    count++;
+  }
+  return count;
+}
+
+function updateAlertPreview() {
+  var msg = val('alert-msg');
+  var preview = document.getElementById('alert-preview');
+  var overflowEl = document.getElementById('alert-preview-overflow');
+
+  if (!msg) {
+    preview.textContent = '\xa0';
+    if (overflowEl) overflowEl.textContent = '';
+    return;
+  }
+
+  var tokens = tokenizeAlertMessage(msg);
+  var fitCount = tokensFittingOnScreen(tokens);
+  var fits = fitCount >= tokens.length;
+
+  preview.innerHTML = '';
+  var firstScreen = document.createElement('span');
+  firstScreen.textContent = tokens.slice(0, fitCount).map(function(tk){ return tk.text; }).join('');
+  preview.appendChild(firstScreen);
+  if (!fits) {
+    var rest = document.createElement('span');
+    rest.className = 'preview-overflow-text';
+    rest.textContent = tokens.slice(fitCount).map(function(tk){ return tk.text; }).join('');
+    preview.appendChild(rest);
+  }
+
+  if (overflowEl) {
+    overflowEl.textContent = fits ? '' : t('alert.multiScreen');
+  }
+}
+
+populateAlertIcons();
+document.getElementById('alert-msg').addEventListener('input', updateAlertPreview);
+
 // ── Send alert ───────────────────────────────────────────────────────────────
 document.getElementById('btn-send-alert').addEventListener('click', function() {
   var msg = val('alert-msg');
@@ -681,7 +820,6 @@ document.getElementById('btn-send-alert').addEventListener('click', function() {
   fetch('/api/alert', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {
     showToast(r.ok ? t('toast.alertSent') : (t('toast.error') + (r.error || '?')));
-    if (r.ok) setVal('alert-msg', '');
   }).catch(function(){ showToast(t('toast.networkError')); });
 });
 
@@ -724,29 +862,6 @@ document.getElementById('btn-save-wifi').addEventListener('click', function() {
   fetch('/api/wifi', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ssid: ssid, password: pass})}).then(function(r){ return r.json(); }).then(function(r) {
     showToast(r.ok ? t('toast.savedRestarting') : (t('toast.error') + (r.error || '?')), 4000);
-  }).catch(function(){ showToast(t('toast.networkError')); });
-});
-
-// ── Regenerate API key ───────────────────────────────────────────────────────
-document.getElementById('btn-regen-key').addEventListener('click', function() {
-  if (!confirm(t('toast.confirmRegenKey'))) return;
-  fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({regen_api_key: true})}).then(function(r){ return r.json(); }).then(function(r) {
-    if (r.ok && r.api_key) {
-      document.getElementById('api-key-box').textContent = r.api_key;
-      showToast(t('toast.newKeyGenerated'));
-    } else {
-      showToast(t('toast.error') + (r.error || '?'));
-    }
-  }).catch(function(){ showToast(t('toast.networkError')); });
-});
-
-// ── Save API auth config ─────────────────────────────────────────────────────
-document.getElementById('btn-save-api').addEventListener('click', function() {
-  var body = { api_auth_enabled: checked('cfg-api-auth') };
-  fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {
-    showToast(r.ok ? t('toast.saved') : (t('toast.error') + (r.error || '?')));
   }).catch(function(){ showToast(t('toast.networkError')); });
 });
 

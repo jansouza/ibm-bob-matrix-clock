@@ -1,3 +1,11 @@
+/*
+ * Smart Matrix Clock
+ * Copyright (c) 2026 Jan Souza
+ *
+ * Licensed under the MIT License. See the LICENSE file
+ * in the project root for full license information.
+ */
+
 #include "ntp.h"
 #include "config.h"
 #include "globals.h"
