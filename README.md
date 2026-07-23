@@ -53,6 +53,7 @@ Arduino/ESP32 firmware for a MAX7219 LED matrix clock with WiFi, web panel and R
 | CS pin | GPIO 5 |
 | Factory reset | BOOT button — GPIO 0 (active LOW) |
 
+![ESP32 MATRIX MAX7219](assets/esp32_matrix_max7219.png)
 ---
 
 ## Repository structure

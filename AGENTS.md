@@ -4,31 +4,30 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Project
 
-ESP32 firmware (Arduino/arduino-cli) for a MAX7219 LED matrix clock. Currently at Phase 1 of 5 implementation phases — see [`docs/implementation-plan.md`](docs/implementation-plan.md) for the roadmap and [`docs/project-spec.md`](docs/project-spec.md) for the full spec.
+ESP32 firmware (Arduino/arduino-cli or PlatformIO) for a MAX7219 LED matrix clock. All 5 implementation phases are complete — see [`docs/implementation-plan.md`](docs/implementation-plan.md) for the roadmap and [`docs/project-spec.md`](docs/project-spec.md) for the full spec.
 
 ## Build & Flash Commands
 
-Board FQBN: `esp32:esp32:esp32` (ESP32 Dev Module)
+Board FQBN: `esp32:esp32:esp32` (ESP32 Dev Module). **Source lives in the `smart-matrix-clock-esp32/` subdirectory.**
 
 ```bash
 # Compile / verify (no device required — use this to check code before flashing)
-arduino-cli compile --fqbn esp32:esp32:esp32 .
+arduino-cli compile --fqbn esp32:esp32:esp32 smart-matrix-clock-esp32
 
-# Upload to device (replace /dev/ttyUSB0 with the actual port)
-arduino-cli upload  --fqbn esp32:esp32:esp32 --port /dev/ttyUSB0 .
-
-# Compile + upload in one step
-arduino-cli compile --fqbn esp32:esp32:esp32 . && \
-arduino-cli upload  --fqbn esp32:esp32:esp32 --port /dev/ttyUSB0 .
+# Upload to device (replace /dev/ttyACM0 with the actual port)
+arduino-cli upload --fqbn esp32:esp32:esp32 --port /dev/ttyACM0 \
+  --upload-property upload.speed=115200 smart-matrix-clock-esp32
 
 # Serial monitor (115200 baud)
 arduino-cli monitor --port /dev/ttyUSB0 --config baudrate=115200
 
-# List connected boards (to find the right port)
-arduino-cli board list
+# PlatformIO equivalents (if pio is installed instead)
+pio run            # compile
+pio run -t upload  # upload
+pio device monitor # serial monitor
 ```
 
-There are no unit tests — validation is done on physical hardware. Always run `arduino-cli compile` before uploading to catch build errors early.
+There are no unit tests — validation is done on physical hardware. Always run the compile/verify step after any code change before reporting completion.
 
 ### Required libraries (already installed)
 
@@ -48,12 +47,15 @@ To install the ESP32 core (if not present): `arduino-cli core install esp32:esp3
 
 - **No blocking anywhere except `setup()`** — `delay()` is forbidden in `loop()`. Every timer uses `millis()`.
 - **HTTP handlers must only set state variables** — never call display or network I/O. The actual work happens in `loop()`.
-- **`ESP.restart()` is never called directly** — always via `scheduleRestart(delayMs)` (Phase 2+) so the HTTP response reaches the client first.
+- **`ESP.restart()` is never called directly** — always via `scheduleRestart(delayMs)` so the HTTP response reaches the client first.
 - **`HTTPClient` is only called from `fetcherTick()`** — never inside HTTP handlers, because it is synchronous and would block the render loop.
-- **All display strings must be UTF-8 → Latin-1 converted** before passing to `MD_Parola` / `MD_MAX72XX`.
+- **All display strings must be UTF-8 → Latin-1 converted** before passing to `MD_Parola` / `MD_MAX72XX`. `alertMessage[]` is stored in Latin-1, not UTF-8.
 - **JSON always built/parsed with `ArduinoJson`** — never manual string concatenation.
 - **Alert slot is one-shot**: `alertPending` is set by the HTTP handler and cleared by `displayTick()` after one scroll completes. Only the most recent alert is kept.
 - **Slot 0 (clock) is the permanent base** — it has no interval (`slotIntervalMs[0] = 0`); other slots return to it after their scroll ends.
+- **`applyTimezone()` must run after `ntpBegin()`** — `configTime()` resets TZ to UTC internally, so calling `applyTimezone()` before it would be silently overwritten. See setup() ordering comment in the `.ino`.
+- **Two separate language settings**: `cfgLanguage` controls the on-device clock/date locale (weekday/month names); `cfgUiLanguage` controls the web panel's own UI language. They are stored independently in NVS.
+- **No authentication on any endpoint** — an API-key mechanism was implemented and removed because the web panel's JS never sent the header, locking the panel out of its own write actions.
 
 ## Module Layout
 
@@ -64,12 +66,13 @@ To install the ESP32 core (if not present): `arduino-cli core install esp32:esp3
 | `display.h/cpp` | MD_Parola rendering, blink, scroll, slot rotation manager |
 | `wifi_manager.h/cpp` | WiFi connect, setup AP, deferred restart |
 | `ntp.h/cpp` | `configTime()` wrapper, sync polling, periodic re-sync |
-| `text_encoding.h/cpp` | UTF-8 ↔ Latin-1 (Phase 2+) |
-| `locale_data.h/cpp` | Day/month names by language, IANA timezone → POSIX TZ table (Phase 2+) |
-| `persistence.h/cpp` | NVS load/save via `Preferences`, `applyTimezone()`, `factoryReset()` (Phase 2+) |
-| `web_page.h` | Single self-contained HTML/CSS/JS string literal (Phase 3+) |
-| `web_routes.h/cpp` | `ESPAsyncWebServer` route registration (Phase 3+) |
-| `data_fetcher.h/cpp` | Open-Meteo + Yahoo Finance HTTP fetch, cache structs (Phase 4+) |
+| `text_encoding.h/cpp` | UTF-8 ↔ Latin-1 conversion |
+| `locale_data.h/cpp` | Day/month names by language, IANA timezone → POSIX TZ table |
+| `persistence.h/cpp` | NVS load/save via `Preferences`, `applyTimezone()`, `factoryReset()` |
+| `date_font.h` | Custom bitmap font for date display |
+| `web_page.h/cpp` | Single self-contained HTML/CSS/JS string literal |
+| `web_routes.h/cpp` | `ESPAsyncWebServer` route registration |
+| `data_fetcher.h/cpp` | Open-Meteo + Yahoo Finance HTTP fetch, cache structs |
 
 ## Key Globals (globals.h)
 
@@ -82,7 +85,7 @@ To install the ESP32 core (if not present): `arduino-cli core install esp32:esp3
 
 - 4× MAX7219 FC16 8×8 LED modules chained via VSPI: CLK=18, DATA/MOSI=23, CS=5
 - Display type constant: `MD_MAX72XX::FC16_HW` — must match physical hardware type or columns will be scrambled
-- BOOT button (GPIO 0) held at power-on triggers factory reset (Phase 2+)
+- BOOT button (GPIO 0, active-LOW) held at power-on triggers factory reset
 
 ## NTP / Timezone
 
@@ -90,7 +93,7 @@ To install the ESP32 core (if not present): `arduino-cli core install esp32:esp3
 - Clock validity check: `tm_year + 1900 >= 2020` (year < 2020 means epoch, i.e., not synced)
 - Periodic re-sync calls `configTime()` again; `ntpSynced` stays `true` during re-sync (clock keeps last value)
 
-## Failure / Cache Policy (Phase 4+)
+## Failure / Cache Policy
 
 - If a slot's data fetch fails and there is no cache → slot is silently skipped that rotation cycle
 - If cache exists but fetch failed → display with `*` prefix (e.g., `*22°C Nublado`)
