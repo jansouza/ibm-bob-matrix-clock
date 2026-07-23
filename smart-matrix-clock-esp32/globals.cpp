@@ -24,6 +24,11 @@ uint32_t alertDurationMs = ALERT_DURATION_DEFAULT_MS;
 int16_t  alertBrightness    = -1;   // -1 = no override, use currentBrightness
 int32_t  alertScrollSpeedMs = -1;   // -1 = no override, use scrollSpeed
 
+// ─── Alert history ────────────────────────────────────────────────────────────
+AlertHistoryEntry alertHistory[ALERT_HISTORY_SIZE];
+uint8_t  alertHistoryCount = 0;
+uint8_t  alertHistoryHead  = 0;
+
 // ─── Slot rotation ────────────────────────────────────────────────────────────
 uint8_t  activeSlot        = 0;
 bool     slotEnabled[4]    = { true, false, false, false };   // [clock, alert, weather, quotes]

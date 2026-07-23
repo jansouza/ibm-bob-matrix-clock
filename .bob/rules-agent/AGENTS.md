@@ -14,13 +14,14 @@ arduino-cli compile --fqbn esp32:esp32:esp32 smart-matrix-clock-esp32
 
 ## Hard Rules (violating these breaks things)
 
-- **No `delay()` in `loop()`** — use `millis()`-based timers exclusively.
+- **No `delay()` in `loop()`** — use `millis()`-based timers exclusively. Exception: `delay(200)` in `_stationConnect()` (`wifi_manager.cpp`) is intentional; it runs only during `setup()`.
 - **No `ESP.restart()` directly** — always set a pending-restart flag/timestamp and execute from `loop()` via `scheduleRestart()`.
 - **No display or network I/O inside HTTP handlers** — handlers only validate input and write state variables.
 - **No `HTTPClient` inside HTTP handlers** — only call it from `fetcherTick()` in `loop()`.
-- **Always convert UTF-8 → Latin-1** before passing strings to `MD_Parola`/`MD_MAX72XX`. `alertMessage[]` is stored Latin-1, not UTF-8.
+- **Use `http.getString()`, not `http.getStream()`** — chunked/compressed ESP32 responses are unreliable with `getStream()`, producing spurious `InvalidInput` JSON parse errors on valid payloads.
+- **Always convert UTF-8 → Latin-1** before passing strings to `MD_Parola`/`MD_MAX72XX`, then call `expandIconTags()` after — order matters. `alertMessage[]` is stored Latin-1.
 - **Always use `ArduinoJson`** for building or parsing JSON — never string concatenation.
-- **`applyTimezone()` must run after `ntpBegin()`** in `setup()` — `configTime()` resets TZ to UTC internally, silently overwriting any earlier call.
+- **`applyTimezone()` must run after `ntpBegin()`** in `setup()` — and again in `ntpTick()` after each periodic re-sync — because `configTime()` resets TZ to UTC internally every call.
 
 ## Adding a New Slot
 
@@ -55,3 +56,11 @@ No other branching logic is needed.
 ## Display Write Optimisation
 
 `displayTick()` compares the new time string against `_lastTimeStr` and only calls `_display.print()` when the content actually changed — preserve this guard when modifying the render path. The MAX7219 write is the expensive/blocking part of each tick.
+
+## FC16_HW Column Direction (direct pixel work only)
+
+Raw column 0 is the **rightmost** physical pixel; raw column 31 is the leftmost. The `_startDateDisplay()` implementation in `display.cpp` has a detailed comment explaining how this affects repositioning and day-of-week decoration loops — read it before doing any `getGraphicObject()` pixel manipulation.
+
+## Yahoo Finance API
+
+Use `v8/finance/chart/{symbol}` — **not** `v7/finance/quote` (that endpoint 401s without a session cookie). Set a fake desktop User-Agent with `http.setUserAgent(...)` — Yahoo rejects the default ESP32 UA.

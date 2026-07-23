@@ -6,13 +6,16 @@ This file provides guidance to agents answering questions about this repository.
 
 - **All 5 phases are implemented** — `text_encoding`, `locale_data`, `persistence`, `web_page`, `web_routes`, `data_fetcher` modules all exist in the current file tree.
 - **Source is in `smart-matrix-clock-esp32/` subdirectory** — not at the project root. The `.ino` file is `smart-matrix-clock-esp32/smart-matrix-clock-esp32.ino`.
-- **Two build systems are supported**: arduino-cli (compile target `smart-matrix-clock-esp32`) and PlatformIO (`pio run`).
+- **Two build systems are supported**: arduino-cli (compile target `smart-matrix-clock-esp32`) and PlatformIO (`pio run`). The `platformio.ini` references older library versions than what arduino-cli has installed — arduino-cli versions are canonical.
 - **Spec and roadmap are in Portuguese** — [`docs/project-spec.md`](docs/project-spec.md) and [`docs/implementation-plan.md`](docs/implementation-plan.md).
-- **No RTOS** — the firmware is cooperative; everything runs in a single `loop()` with `millis()` timers. Questions about "threading" or "tasks" don't apply.
-- **`configTime(0,0,server)` sets UTC** — timezone is handled entirely by a POSIX TZ string via `setenv("TZ",...)`. The UTC offsets in `configTime` are always 0. `applyTimezone()` must run after `ntpBegin()` because `configTime()` resets TZ to UTC internally.
+- **No RTOS** — the firmware is cooperative; everything runs in a single `loop()` with `millis()` timers. Exception: `delay(200)` in `_stationConnect()` (`wifi_manager.cpp`) is intentional and runs only during `setup()`.
+- **`configTime(0,0,server)` sets UTC** — timezone is handled entirely by a POSIX TZ string via `setenv("TZ",...)`. The UTC offsets in `configTime` are always 0. `applyTimezone()` must run after `ntpBegin()` because `configTime()` resets TZ to UTC internally, and again in `ntpTick()` after every periodic re-sync.
 - **Clock validity heuristic**: year ≥ 2020 means NTP-synced; epoch (year < 2020) means not yet synced.
-- **`alertMessage[]` is Latin-1 encoded** (not UTF-8) — HTTP input must be converted before storage.
-- **`slotIntervalMs[0]` = 0** — the clock slot has no display interval because it is the permanent base, not a rotating slot.
-- **`DISPLAY_HARDWARE = MD_MAX72XX::FC16_HW`** — this must match the physical module type or the column mapping will be wrong.
+- **`alertMessage[]` is Latin-1 encoded** (not UTF-8) — HTTP input is converted with `utf8ToLatin1()` first, then `expandIconTags()` is called (order matters: brackets in tags are ASCII and survive the encoding step).
+- **Icon tags** — `[heart]`, `[diamond]`, `[spade]`, `[bullet]`, `[star]`, `[arrow_right]`, `[arrow_left]`, `[up]`, `[down]`, `[bell]`, `[warn]` — resolved to CP437 control bytes (0x01–0x1F) by `expandIconTags()` in `text_encoding.cpp`. Only glyphs that are legible at 8-row resolution are included.
+- **`slotIntervalMs[0]` = 0** — the clock slot has no display interval because it is the permanent base, not a rotating slot. Runtime defaults in `globals.cpp`: slot 2 = 60 s, slot 3 = 120 s.
+- **`DISPLAY_HARDWARE = MD_MAX72XX::FC16_HW`** — this must match the physical module type or the column mapping will be wrong. FC16_HW reverses column direction: raw column 0 is the rightmost physical pixel.
 - **Two separate language settings**: `cfgLanguage` = on-device display locale (weekday/month names); `cfgUiLanguage` = web panel interface language. Independent of each other, both in NVS namespace `"clk"`.
 - **No authentication** — an X-API-Key mechanism was built and then removed; the panel never sent the header so it locked itself out. HTTP Basic Auth is planned but not yet implemented.
+- **Yahoo Finance API** — quotes use `v8/finance/chart/{symbol}` per-symbol (not the `v7/finance/quote` batch endpoint, which 401s without a session cookie). `changePercent` is computed client-side; a fake desktop User-Agent is required.
+- **`http.getString()` not `getStream()`** — `getStream()` is unreliable with chunked/compressed responses on ESP32 and causes spurious JSON parse failures on valid payloads.

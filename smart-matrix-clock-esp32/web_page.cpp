@@ -272,6 +272,12 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
         </div>
       </div>
     </div>
+    <div class="card">
+      <h2 data-i18n="alert.historyTitle">Alert History</h2>
+      <div id="alert-history-list" style="display:flex;flex-direction:column;gap:6px">
+        <div style="color:#8b949e;font-size:13px" data-i18n="alert.historyEmpty">No alerts sent yet.</div>
+      </div>
+    </div>
   </div>
 
   <!-- ── WEATHER TAB ──────────────────────────────────────────────────── -->
@@ -446,6 +452,9 @@ var I18N = {
     'alert.durationHint': 'Time shown on the display',
     'alert.override': 'Override brightness/speed for this alert',
     'alert.send': 'Send',
+    'alert.historyTitle': 'Alert History',
+    'alert.historyEmpty': 'No alerts sent yet.',
+    'alert.historyRefresh': 'Refresh',
     'weather.slotTitle': 'Weather Slot',
     'weather.enable': 'Enable weather slot',
     'weather.location': 'Location',
@@ -523,6 +532,9 @@ var I18N = {
     'alert.durationHint': 'Tempo de exibi&#231;&#227;o no display',
     'alert.override': 'Sobrescrever brilho/velocidade para este alerta',
     'alert.send': 'Enviar',
+    'alert.historyTitle': 'Hist&#243;rico de Alertas',
+    'alert.historyEmpty': 'Nenhum alerta enviado ainda.',
+    'alert.historyRefresh': 'Atualizar',
     'weather.slotTitle': 'Slot de Clima',
     'weather.enable': 'Habilitar slot de clima',
     'weather.location': 'Localiza&#231;&#227;o',
@@ -948,7 +960,50 @@ document.getElementById('btn-send-alert').addEventListener('click', function() {
   fetch('/api/alert', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {
     showToast(r.ok ? t('toast.alertSent') : (t('toast.error') + (r.error || '?')));
+    if (r.ok) loadAlertHistory();
   }).catch(function(){ showToast(t('toast.networkError')); });
+});
+
+// ── Alert history ─────────────────────────────────────────────────────────────
+function formatAlertTimestamp(ts) {
+  if (!ts) return '';
+  var d = new Date(ts * 1000);
+  var pad = function(n) { return String(n).padStart(2, '0'); };
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+         ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+
+function loadAlertHistory() {
+  fetch('/api/alerts/history').then(function(r){ return r.json(); }).then(function(entries) {
+    var container = document.getElementById('alert-history-list');
+    if (!entries || entries.length === 0) {
+      container.innerHTML = '<div style="color:#8b949e;font-size:13px" data-i18n="alert.historyEmpty">' + t('alert.historyEmpty') + '</div>';
+      return;
+    }
+    container.innerHTML = '';
+    // Show newest first
+    for (var i = entries.length - 1; i >= 0; i--) {
+      var e = entries[i];
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;align-items:baseline;border-bottom:1px solid #21262d;padding-bottom:4px;font-size:13px';
+      var ts = document.createElement('span');
+      ts.style.cssText = 'color:#8b949e;white-space:nowrap;font-family:monospace;flex-shrink:0';
+      ts.textContent = formatAlertTimestamp(e.timestamp);
+      var msg = document.createElement('span');
+      msg.style.cssText = 'color:#c9d1d9;word-break:break-word';
+      msg.textContent = e.message;
+      row.appendChild(ts);
+      row.appendChild(msg);
+      container.appendChild(row);
+    }
+  }).catch(function() {});
+}
+
+// Load history on tab switch to Alert
+document.querySelectorAll('.tab').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    if (btn.getAttribute('data-tab') === 'alert') loadAlertHistory();
+  });
 });
 
 // ── Search city/postal code via Open-Meteo geocoding and fill lat/lon ───────

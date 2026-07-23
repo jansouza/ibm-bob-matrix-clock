@@ -25,6 +25,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <stdint.h>
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -372,8 +373,43 @@ static void _handlePostAlert(AsyncWebServerRequest* req, uint8_t* data, size_t l
         alertScrollSpeedMs = v;
     }
 
+    // Append to alert history ring buffer (newest entry overwrites oldest when full)
+    {
+        uint8_t idx;
+        if (alertHistoryCount < ALERT_HISTORY_SIZE) {
+            idx = alertHistoryCount;
+            alertHistoryCount++;
+        } else {
+            // Buffer full — overwrite the oldest entry and advance the head
+            idx = alertHistoryHead;
+            alertHistoryHead = (alertHistoryHead + 1) % ALERT_HISTORY_SIZE;
+        }
+        alertHistory[idx].timestamp = time(nullptr);
+        strncpy(alertHistory[idx].message, alertMessage, MAX_ALERT_LEN - 1);
+        alertHistory[idx].message[MAX_ALERT_LEN - 1] = '\0';
+    }
+
     alertPending = true;
     _sendOk(req);
+}
+
+// ─── GET /api/alerts/history ─────────────────────────────────────────────────
+
+static void _handleGetAlertsHistory(AsyncWebServerRequest* req) {
+    JsonDocument doc;
+    JsonArray arr = doc.to<JsonArray>();
+
+    // Walk the ring buffer from oldest to newest
+    for (uint8_t i = 0; i < alertHistoryCount; i++) {
+        uint8_t idx = (alertHistoryHead + i) % ALERT_HISTORY_SIZE;
+        JsonObject entry = arr.add<JsonObject>();
+        entry["timestamp"] = (long long)alertHistory[idx].timestamp;
+        entry["message"]   = alertHistory[idx].message;
+    }
+
+    String body;
+    serializeJson(doc, body);
+    req->send(200, "application/json", body);
 }
 
 // ─── GET /api/timezones ───────────────────────────────────────────────────────
@@ -461,9 +497,10 @@ static void _handlePostPreview(AsyncWebServerRequest* req, uint8_t* data, size_t
 void webRoutesBegin(AsyncWebServer& server) {
     server.on("/", HTTP_GET, _handleRoot);
 
-    server.on("/api/status",    HTTP_GET,  _handleGetStatus);
-    server.on("/api/config",    HTTP_GET,  _handleGetConfig);
-    server.on("/api/timezones", HTTP_GET,  _handleGetTimezones);
+    server.on("/api/status",          HTTP_GET,  _handleGetStatus);
+    server.on("/api/config",          HTTP_GET,  _handleGetConfig);
+    server.on("/api/timezones",       HTTP_GET,  _handleGetTimezones);
+    server.on("/api/alerts/history",  HTTP_GET,  _handleGetAlertsHistory);
 
     // Body-receiving handlers (POST)
     server.on("/api/config", HTTP_POST, [](AsyncWebServerRequest* req){},

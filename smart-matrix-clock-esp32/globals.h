@@ -30,6 +30,12 @@ struct QuoteCache {
     bool     valid;                         // true once a successful fetch occurred
 };
 
+// ─── Alert history ────────────────────────────────────────────────────────────
+struct AlertHistoryEntry {
+    time_t  timestamp;                      // Unix time when the alert was received
+    char    message[MAX_ALERT_LEN];         // Latin-1 encoded message (as stored)
+};
+
 // ─── Display settings ─────────────────────────────────────────────────────────
 extern uint8_t  currentBrightness;    // 0–15
 extern uint16_t scrollSpeed;          // ms per scroll frame
@@ -44,6 +50,9 @@ extern uint8_t  alertMode;            // ALERT_MODE_SCROLL / BLINK / STATIC
 extern uint32_t alertDurationMs;      // duration for blink/static modes (ms)
 extern int16_t  alertBrightness;      // per-alert brightness override, 0–15; -1 = use currentBrightness
 extern int32_t  alertScrollSpeedMs;   // per-alert scroll speed override, ms; -1 = use scrollSpeed
+extern AlertHistoryEntry alertHistory[];  // ring buffer of recent alerts
+extern uint8_t  alertHistoryCount;    // number of valid entries (0..ALERT_HISTORY_SIZE)
+extern uint8_t  alertHistoryHead;     // index of the oldest entry (ring buffer head)
 
 // ─── Slot rotation ────────────────────────────────────────────────────────────
 extern uint8_t  activeSlot;           // index of the currently active slot
