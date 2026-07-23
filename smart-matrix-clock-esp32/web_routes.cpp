@@ -16,6 +16,7 @@
 #include "ntp.h"
 #include "web_page.h"
 #include "display.h"
+#include "data_fetcher.h"
 
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
@@ -73,6 +74,22 @@ static void _handleGetStatus(AsyncWebServerRequest* req) {
         doc["time_str"] = "--:--";
     }
 
+    // Weather cache snapshot for the web panel
+    doc["weather_cache_valid"] = weatherCache.valid;
+    doc["weather_cache_stale"] = weatherCache.stale;
+    if (weatherCache.valid) {
+        bool isFahrenheit = (cfgTempUnit[0] == 'F' || cfgTempUnit[0] == 'f');
+        char preview[64];
+        int  temp = (int)(weatherCache.temp + (weatherCache.temp >= 0 ? 0.5f : -0.5f));
+        int  tmin = (int)(weatherCache.minTemp + (weatherCache.minTemp >= 0 ? 0.5f : -0.5f));
+        int  tmax = (int)(weatherCache.maxTemp + (weatherCache.maxTemp >= 0 ? 0.5f : -0.5f));
+        snprintf(preview, sizeof(preview), "%s%d°%c %s  Min%d  Max%d",
+                 weatherCache.stale ? "*" : "",
+                 temp, isFahrenheit ? 'F' : 'C',
+                 weatherCache.condition, tmin, tmax);
+        doc["weather_preview"] = preview;
+    }
+
     String body;
     serializeJson(doc, body);
     req->send(200, "application/json", body);
@@ -93,11 +110,11 @@ static void _handleGetConfig(AsyncWebServerRequest* req) {
     doc["ui_language"]      = cfgUiLanguage;
 
     doc["weather_enabled"]    = slotEnabled[2];
-    doc["weather_update_ms"]  = slotIntervalMs[2];   // reused for fetch interval (Phase 4 will add separate field)
+    doc["weather_update_ms"]  = cfgWeatherUpdateMs;
     doc["weather_display_ms"] = slotIntervalMs[2];
-    doc["weather_lat"]        = 0.0;   // Phase 4 will populate from weatherCfgLat
-    doc["weather_lon"]        = 0.0;
-    doc["temp_unit"]          = "C";
+    doc["weather_lat"]        = cfgWeatherLat;
+    doc["weather_lon"]        = cfgWeatherLon;
+    doc["temp_unit"]          = cfgTempUnit;
 
     doc["quotes_enabled"]    = slotEnabled[3];
     doc["quotes_update_ms"]  = slotIntervalMs[3];
@@ -207,8 +224,42 @@ static void _handlePostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t 
     }
     if (doc["weather_display_ms"].is<long>()) {
         long v = doc["weather_display_ms"].as<long>();
-        if (v < 5000 || v > 300000) { _sendError(req, 400, "weather_display_ms out of range"); return; }
+        if (v < (long)WEATHER_DISPLAY_MIN_MS || v > (long)WEATHER_DISPLAY_MAX_MS) {
+            _sendError(req, 400, "weather_display_ms out of range"); return;
+        }
         slotIntervalMs[2] = (uint32_t)v;
+        changed = true;
+    }
+    if (doc["weather_update_ms"].is<long>()) {
+        long v = doc["weather_update_ms"].as<long>();
+        if (v < (long)WEATHER_UPDATE_MIN_MS || v > (long)WEATHER_UPDATE_MAX_MS) {
+            _sendError(req, 400, "weather_update_ms out of range"); return;
+        }
+        cfgWeatherUpdateMs = (uint32_t)v;
+        changed = true;
+    }
+    if (doc["weather_lat"].is<float>()) {
+        float v = doc["weather_lat"].as<float>();
+        if (v < -90.0f || v > 90.0f) { _sendError(req, 400, "weather_lat out of range"); return; }
+        cfgWeatherLat = v;
+        fetcherReset();
+        changed = true;
+    }
+    if (doc["weather_lon"].is<float>()) {
+        float v = doc["weather_lon"].as<float>();
+        if (v < -180.0f || v > 180.0f) { _sendError(req, 400, "weather_lon out of range"); return; }
+        cfgWeatherLon = v;
+        fetcherReset();
+        changed = true;
+    }
+    if (doc["temp_unit"].is<const char*>()) {
+        const char* u = doc["temp_unit"].as<const char*>();
+        if (strcmp(u, "C") != 0 && strcmp(u, "F") != 0) {
+            _sendError(req, 400, "temp_unit must be 'C' or 'F'"); return;
+        }
+        strncpy(cfgTempUnit, u, WEATHER_TEMP_UNIT_MAX - 1);
+        cfgTempUnit[WEATHER_TEMP_UNIT_MAX - 1] = '\0';
+        fetcherReset();
         changed = true;
     }
 
@@ -333,6 +384,32 @@ static void _handlePostWifi(AsyncWebServerRequest* req, uint8_t* data, size_t le
     _sendOk(req);
 }
 
+// ─── POST /api/preview ───────────────────────────────────────────────────────
+// Force-show a slot on the display immediately, bypassing the rotation timer.
+// Body: {"slot": 2}   (2 = Weather; future slots follow the same pattern)
+// The slot must be enabled and have a valid cache; otherwise returns ok:false.
+
+static void _handlePostPreview(AsyncWebServerRequest* req, uint8_t* data, size_t len,
+                                size_t index, size_t total) {
+    (void)index; (void)total;
+
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, data, len);
+    if (err) { _sendError(req, 400, "Invalid JSON"); return; }
+
+    if (!doc["slot"].is<int>()) { _sendError(req, 400, "Missing 'slot' field"); return; }
+    int slot = doc["slot"].as<int>();
+    if (slot < 2 || slot > 3) { _sendError(req, 400, "slot must be 2 (weather) or 3 (quotes)"); return; }
+
+    if (slot == 2) {
+        if (!slotEnabled[2])        { _sendError(req, 400, "Weather slot is disabled"); return; }
+        if (!weatherCache.valid)    { _sendError(req, 400, "No weather data cached yet"); return; }
+    }
+
+    displayForceSlot((uint8_t)slot);
+    _sendOk(req);
+}
+
 // ─── webRoutesBegin ───────────────────────────────────────────────────────────
 
 void webRoutesBegin(AsyncWebServer& server) {
@@ -351,6 +428,9 @@ void webRoutesBegin(AsyncWebServer& server) {
 
     server.on("/api/wifi", HTTP_POST, [](AsyncWebServerRequest* req){},
               nullptr, _handlePostWifi);
+
+    server.on("/api/preview", HTTP_POST, [](AsyncWebServerRequest* req){},
+              nullptr, _handlePostPreview);
 
     // 404 handler
     server.onNotFound([](AsyncWebServerRequest* req){

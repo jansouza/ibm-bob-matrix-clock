@@ -14,6 +14,8 @@
 #include "persistence.h"
 #include "web_routes.h"
 
+#include "data_fetcher.h"
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
@@ -78,7 +80,8 @@ void setup() {
 // loop()
 // ─────────────────────────────────────────────────────────────────────────────
 void loop() {
-    wifiTick();     // handle reconnect and deferred restart
-    ntpTick();      // check sync status, trigger periodic re-sync
-    displayTick();  // update colon blink, date scroll, alert queue
+    wifiTick();      // handle reconnect and deferred restart
+    ntpTick();       // check sync status, trigger periodic re-sync
+    fetcherTick();   // check weather (and quotes in Phase 5) fetch timers
+    displayTick();   // update colon blink, date scroll, alert queue, slot rotation
 }

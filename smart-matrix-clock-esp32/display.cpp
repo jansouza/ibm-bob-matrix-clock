@@ -13,6 +13,7 @@
 #include "text_encoding.h"
 #include "wifi_manager.h"
 #include "date_font.h"
+#include "data_fetcher.h"
 
 #include <MD_MAX72xx.h>
 #include <MD_Parola.h>
@@ -67,6 +68,11 @@ static uint32_t _alertCycleStartMs  = 0;      // millis() when the overall BLINK
 static bool     _dateActive       = false;
 static uint32_t _dateMsStart      = 0;
 static char     _dateLine[12]     = "";  // e.g. "SEG 1407" or "MON 0714"
+
+// ── Slot rotation state ───────────────────────────────────────────────────────
+static uint32_t _slotStartMs      = 0;   // when the current non-clock slot began
+static bool     _slotActive       = false; // true while a non-clock slot is running
+static int8_t   _forceSlotIndex   = -1;   // set by displayForceSlot(); consumed by displayTick()
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
@@ -274,6 +280,79 @@ static void _startDateDisplay() {
     _lastTimeStr[0] = '\0';
 }
 
+// ─── Slot rotation ────────────────────────────────────────────────────────────
+
+// Build the weather display string into dst[dstLen].
+// Format: "22°C Cloudy Min18 Max27" (or with * prefix if stale).
+// Returns false if the cache is not valid (slot should be skipped).
+static bool _buildWeatherString(char* dst, size_t dstLen) {
+    if (!weatherCache.valid) return false;
+
+    bool isFahrenheit = (cfgTempUnit[0] == 'F' || cfgTempUnit[0] == 'f');
+    char unitCh = isFahrenheit ? 'F' : 'C';
+
+    // Round temperatures to nearest integer for compact display
+    int temp = (int)(weatherCache.temp + (weatherCache.temp >= 0 ? 0.5f : -0.5f));
+    int tmin = (int)(weatherCache.minTemp + (weatherCache.minTemp >= 0 ? 0.5f : -0.5f));
+    int tmax = (int)(weatherCache.maxTemp + (weatherCache.maxTemp >= 0 ? 0.5f : -0.5f));
+
+    // The degree sign in Latin-1 is 0xB0 (°)
+    snprintf(dst, dstLen, "%s%d\xB0%c %s Min%d Max%d",
+             weatherCache.stale ? "*" : "",
+             temp, unitCh,
+             weatherCache.condition,
+             tmin, tmax);
+    return true;
+}
+
+// Start a slot scroll immediately (shared by timer-driven and forced paths).
+// Returns true if a scroll was started.
+static bool _startSlotScroll(uint8_t slot) {
+    if (slot == 2) {
+        char buf[SCROLL_BUF_LEN];
+        if (_buildWeatherString(buf, sizeof(buf))) {
+            _slotStartMs = millis();
+            _slotActive  = true;
+            activeSlot   = 2;
+            _startScrollAt(buf, scrollSpeed);
+            return true;
+        }
+    }
+    return false;
+}
+
+// Check slot rotation timer and trigger next slot when due.
+// Must be called from displayTick() only when the display is idle (not
+// scrolling, not alerting, not showing date).
+static void _slotRotationTick() {
+    uint32_t now = millis();
+
+    // If a slot scroll was active and has now finished, clear the active flag.
+    if (_slotActive) {
+        if (_scrolling) return;   // still scrolling — nothing to do yet
+        _slotActive = false;
+        activeSlot  = 0;          // return to clock
+        // Reset timer from when this slot ended, not when it started.
+        _slotStartMs = now;
+        return;   // give clock one tick to redraw before next check
+    }
+
+    // Forced preview requested by displayForceSlot() (from HTTP handler).
+    if (_forceSlotIndex >= 0) {
+        uint8_t s = (uint8_t)_forceSlotIndex;
+        _forceSlotIndex = -1;
+        _startSlotScroll(s);   // ignore return — if no cache, just skip
+        return;
+    }
+
+    // Timer-driven rotation: slot 2 = Weather (slot 3 = Quotes, Phase 5).
+    if (slotEnabled[2] && weatherCache.valid) {
+        if (now - _slotStartMs >= slotIntervalMs[2]) {
+            _startSlotScroll(2);
+        }
+    }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 void displayBegin() {
@@ -283,6 +362,7 @@ void displayBegin() {
     _display.setTextAlignment(PA_CENTER);
     _display.print("--:--");
     _lastDateShow = millis();   // don't show date immediately on boot
+    _slotStartMs  = millis();   // don't show weather slot immediately on boot
 }
 
 void displayTick() {
@@ -415,6 +495,10 @@ void displayTick() {
         }
     }
 
+    // ── Slot rotation (weather slot; quotes in Phase 5) ───────────────────────
+    _slotRotationTick();
+    if (_scrolling) return;   // rotation just started a scroll — done this tick
+
     // ── Colon blink every BLINK_INTERVAL_MS ───────────────────────────────────
     if (now - _lastBlink >= BLINK_INTERVAL_MS) {
         _lastBlink    = now;
@@ -463,4 +547,10 @@ void displaySetApMessage(const char* latin1Text) {
     strncpy(_apMsgBuf, latin1Text, sizeof(_apMsgBuf) - 1);
     _apMsgBuf[sizeof(_apMsgBuf) - 1] = '\0';
     _startScrollAt(_apMsgBuf, AP_SCROLL_SPEED_MS);
+}
+
+void displayForceSlot(uint8_t slotIndex) {
+    // Safe to call from an HTTP handler — only sets a flag.
+    // displayTick() / _slotRotationTick() consumes it on the next loop iteration.
+    _forceSlotIndex = (int8_t)slotIndex;
 }

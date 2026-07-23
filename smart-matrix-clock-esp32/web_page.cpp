@@ -285,7 +285,16 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
     </div>
     <div class="card">
       <h2 data-i18n="weather.location">Location</h2>
-      <div class="row">
+      <div class="field">
+        <label data-i18n="weather.citySearch">Search city or postal code</label>
+        <div style="display:flex;gap:8px">
+          <input id="cfg-city-search" type="text" style="flex:1" data-i18n-ph="weather.citySearchPlaceholder" placeholder="e.g. Sao Paulo, BR"/>
+          <button class="btn btn-secondary" id="btn-city-search" data-i18n="weather.search">Search</button>
+        </div>
+        <div id="city-search-status" style="font-size:12px;margin-top:6px;color:#8b949e"></div>
+        <div id="city-search-results" style="margin-top:6px;display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+      <div class="row" style="margin-top:12px">
         <div class="field">
           <label data-i18n="weather.latitude">Latitude</label>
           <input id="cfg-weather-lat" type="number" step="0.0001" min="-90" max="90"/>
@@ -317,7 +326,12 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
       </div>
     </div>
     <div class="actions">
+      <button class="btn btn-secondary" id="btn-preview-weather" data-i18n="weather.previewOnDisplay">Preview on display</button>
       <button class="btn btn-primary" id="btn-save-weather" data-i18n="common.saveSettings">Save settings</button>
+    </div>
+    <div class="card" id="weather-cache-card" style="margin-top:14px">
+      <h2 data-i18n="weather.cacheTitle">Last data</h2>
+      <div id="weather-cache-info" style="font-size:13px;color:#8b949e" data-i18n="weather.noCache">No data yet</div>
     </div>
   </div>
 
@@ -431,7 +445,19 @@ var I18N = {
     'weather.enable': 'Enable weather slot',
     'weather.location': 'Location',
     'weather.latitude': 'Latitude', 'weather.longitude': 'Longitude',
+    'weather.citySearch': 'Search city or postal code',
+    'weather.citySearchPlaceholder': 'e.g. Sao Paulo, BR',
+    'weather.search': 'Search',
+    'weather.searching': 'Searching...',
+    'weather.searchNoResults': 'No results found',
+    'weather.searchError': 'Search failed — check your internet connection',
+    'weather.searchEmpty': 'Type a city name or postal code',
+    'weather.citySelected': 'Location set',
     'weather.tempUnit': 'Temperature unit',
+    'weather.previewOnDisplay': 'Preview on display',
+    'weather.cacheTitle': 'Last data',
+    'weather.noCache': 'No data yet — enable slot and wait for first fetch',
+    'weather.cacheStale': '* Stale — last fetch failed',
     'quotes.slotTitle': 'Quotes Slot',
     'quotes.enable': 'Enable quotes slot',
     'quotes.assets': 'Assets (tickers)',
@@ -451,6 +477,7 @@ var I18N = {
     'toast.saved': 'Saved!', 'toast.error': 'Error: ',
     'toast.networkError': 'Network error',
     'toast.alertSent': 'Alert sent!',
+    'toast.previewSent': 'Sent to display!',
     'toast.ssidEmpty': 'SSID cannot be empty',
     'toast.confirmRestart': 'This will restart the device. Continue?',
     'toast.savedRestarting': 'Saved! Restarting...'
@@ -491,7 +518,19 @@ var I18N = {
     'weather.enable': 'Habilitar slot de clima',
     'weather.location': 'Localiza&#231;&#227;o',
     'weather.latitude': 'Latitude', 'weather.longitude': 'Longitude',
+    'weather.citySearch': 'Buscar cidade ou CEP',
+    'weather.citySearchPlaceholder': 'ex: Sao Paulo, BR',
+    'weather.search': 'Buscar',
+    'weather.searching': 'Buscando...',
+    'weather.searchNoResults': 'Nenhum resultado encontrado',
+    'weather.searchError': 'Falha na busca &#8212; verifique sua conex&#227;o com a internet',
+    'weather.searchEmpty': 'Digite o nome de uma cidade ou CEP',
+    'weather.citySelected': 'Localiza&#231;&#227;o definida',
     'weather.tempUnit': 'Unidade de temperatura',
+    'weather.previewOnDisplay': 'Mostrar no display agora',
+    'weather.cacheTitle': '&#218;ltimos dados',
+    'weather.noCache': 'Sem dados ainda &#8212; habilite o slot e aguarde o primeiro fetch',
+    'weather.cacheStale': '* Desatualizado &#8212; &#250;ltimo fetch falhou',
     'quotes.slotTitle': 'Slot de Cota&#231;&#245;es',
     'quotes.enable': 'Habilitar slot de cota&#231;&#245;es',
     'quotes.assets': 'Ativos (tickers)',
@@ -511,6 +550,7 @@ var I18N = {
     'toast.saved': 'Salvo!', 'toast.error': 'Erro: ',
     'toast.networkError': 'Erro de rede',
     'toast.alertSent': 'Alerta enviado!',
+    'toast.previewSent': 'Enviado para o display!',
     'toast.ssidEmpty': 'SSID não pode ser vazio',
     'toast.confirmRestart': 'Isso vai reiniciar o dispositivo. Continuar?',
     'toast.savedRestarting': 'Salvo! Reiniciando...'
@@ -677,6 +717,22 @@ function pollStatus() {
     setText('net-ssid', s.ssid || '--');
     setText('net-ip', s.ip || '--');
     setText('net-status', s.ntp_synced ? t('status.connected') : t('status.noSync'));
+
+    // Weather cache info
+    var cacheEl = document.getElementById('weather-cache-info');
+    var previewBtn = document.getElementById('btn-preview-weather');
+    if (cacheEl) {
+      if (s.weather_cache_valid) {
+        var staleNote = s.weather_cache_stale ? ' <span style="color:#e3b341">(' + t('weather.cacheStale') + ')</span>' : '';
+        cacheEl.innerHTML = s.weather_preview + staleNote;
+      } else {
+        cacheEl.textContent = t('weather.noCache');
+      }
+    }
+    if (previewBtn) {
+      previewBtn.disabled = !s.weather_cache_valid;
+      previewBtn.style.opacity = s.weather_cache_valid ? '1' : '0.4';
+    }
   }).catch(function(){});
 }
 
@@ -866,6 +922,52 @@ document.getElementById('btn-send-alert').addEventListener('click', function() {
   }).catch(function(){ showToast(t('toast.networkError')); });
 });
 
+// ── Search city/postal code via Open-Meteo geocoding and fill lat/lon ───────
+function runCitySearch() {
+  var statusEl   = document.getElementById('city-search-status');
+  var resultsEl  = document.getElementById('city-search-results');
+  var query      = val('cfg-city-search').trim();
+  resultsEl.innerHTML = '';
+  if (!query) {
+    statusEl.textContent = t('weather.searchEmpty');
+    return;
+  }
+  statusEl.textContent = t('weather.searching');
+  var lang = (document.getElementById('cfg-language') ? val('cfg-language') : 'en') || 'en';
+  var url = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
+            encodeURIComponent(query) + '&count=5&language=' + encodeURIComponent(lang) + '&format=json';
+  fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+    var results = data.results || [];
+    if (results.length === 0) {
+      statusEl.textContent = t('weather.searchNoResults');
+      return;
+    }
+    statusEl.textContent = '';
+    results.forEach(function(place) {
+      var btn = document.createElement('button');
+      btn.className = 'btn btn-secondary';
+      btn.style.textAlign = 'left';
+      var parts = [place.name];
+      if (place.admin1) parts.push(place.admin1);
+      if (place.country) parts.push(place.country);
+      btn.textContent = parts.join(', ') + ' (' + place.latitude.toFixed(2) + ', ' + place.longitude.toFixed(2) + ')';
+      btn.addEventListener('click', function() {
+        document.getElementById('cfg-weather-lat').value = place.latitude.toFixed(4);
+        document.getElementById('cfg-weather-lon').value = place.longitude.toFixed(4);
+        statusEl.textContent = t('weather.citySelected');
+        resultsEl.innerHTML = '';
+      });
+      resultsEl.appendChild(btn);
+    });
+  }).catch(function() {
+    statusEl.textContent = t('weather.searchError');
+  });
+}
+document.getElementById('btn-city-search').addEventListener('click', runCitySearch);
+document.getElementById('cfg-city-search').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); runCitySearch(); }
+});
+
 // ── Save weather config ──────────────────────────────────────────────────────
 document.getElementById('btn-save-weather').addEventListener('click', function() {
   var body = {
@@ -879,6 +981,14 @@ document.getElementById('btn-save-weather').addEventListener('click', function()
   fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {
     showToast(r.ok ? t('toast.saved') : (t('toast.error') + (r.error || '?')));
+  }).catch(function(){ showToast(t('toast.networkError')); });
+});
+
+// ── Preview weather on display ───────────────────────────────────────────────
+document.getElementById('btn-preview-weather').addEventListener('click', function() {
+  fetch('/api/preview', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({slot: 2})}).then(function(r){ return r.json(); }).then(function(r) {
+    showToast(r.ok ? t('toast.previewSent') : (t('toast.error') + (r.error || '?')));
   }).catch(function(){ showToast(t('toast.networkError')); });
 });
 

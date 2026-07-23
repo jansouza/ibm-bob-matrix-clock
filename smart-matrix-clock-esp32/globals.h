@@ -11,6 +11,17 @@
 #include <stdbool.h>
 #include "config.h"
 
+// ─── Weather cache (Phase 4) ──────────────────────────────────────────────────
+struct WeatherCache {
+    float    temp;                          // current temperature
+    float    minTemp;                       // day's min temperature
+    float    maxTemp;                       // day's max temperature
+    char     condition[WEATHER_CONDITION_MAX]; // localised condition string (Latin-1)
+    bool     valid;                         // true once a successful fetch occurred
+    bool     stale;                         // true if last fetch failed but cache exists
+    uint32_t fetchedAt;                     // millis() of last successful fetch
+};
+
 // ─── Display settings ─────────────────────────────────────────────────────────
 extern uint8_t  currentBrightness;    // 0–15
 extern uint16_t scrollSpeed;          // ms per scroll frame
@@ -40,3 +51,10 @@ extern char     cfgWifiPass[];        // stored WiFi password
 extern uint32_t cfgDateIntervalMs;    // how often date fires (ms); 0 = disabled
 extern bool     cfgDateEnabled;       // true = show date periodically
 extern char     cfgUiLanguage[];      // web panel UI language (e.g. "en", "pt") — independent of cfgLanguage
+
+// ─── Weather configuration (Phase 4) ──────────────────────────────────────────
+extern float    cfgWeatherLat;        // latitude
+extern float    cfgWeatherLon;        // longitude
+extern uint32_t cfgWeatherUpdateMs;   // fetch interval (ms)
+extern char     cfgTempUnit[];        // "C" or "F"
+extern WeatherCache weatherCache;     // last known weather data

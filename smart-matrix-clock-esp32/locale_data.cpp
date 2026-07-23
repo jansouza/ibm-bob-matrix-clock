@@ -95,3 +95,69 @@ const TZEntry* tzTableEntry(uint8_t i) {
     if (i >= _tzCount) return nullptr;
     return &_tzTable[i];
 }
+
+// ─── WMO weather condition code → localised string ────────────────────────────
+// WMO code groups (from Open-Meteo / WMO Table 4677):
+//   0        Clear sky
+//   1,2,3    Mainly clear / partly cloudy / overcast
+//   45,48    Fog / depositing rime fog
+//   51,53,55 Drizzle light/moderate/dense
+//   56,57    Freezing drizzle light/heavy
+//   61,63,65 Rain light/moderate/heavy
+//   66,67    Freezing rain light/heavy
+//   71,73,75 Snow light/moderate/heavy
+//   77       Snow grains
+//   80,81,82 Rain showers slight/moderate/heavy
+//   85,86    Snow showers slight/heavy
+//   95       Thunderstorm
+//   96,99    Thunderstorm w/ hail
+
+struct _WMOEntry {
+    uint8_t     code;
+    const char* en;
+    const char* pt;
+};
+
+static const _WMOEntry _wmoTable[] = {
+    {  0, "Clear",        "Limpo"       },
+    {  1, "Mainly clear", "Qtdo limpo"  },
+    {  2, "Part cloudy",  "Nublado"     },
+    {  3, "Overcast",     "Coberto"     },
+    { 45, "Fog",          "Nevoa"       },
+    { 48, "Rime fog",     "Geada"       },
+    { 51, "Lt drizzle",   "Garoa leve"  },
+    { 53, "Drizzle",      "Garoa"       },
+    { 55, "Hvy drizzle",  "Garoa forte" },
+    { 56, "Frz drizzle",  "Garoa fria"  },
+    { 57, "Hvy frz drz",  "Garoa g fria"},
+    { 61, "Lt rain",      "Chuva leve"  },
+    { 63, "Rain",         "Chuva"       },
+    { 65, "Hvy rain",     "Chuva forte" },
+    { 66, "Frz rain",     "Chuva fria"  },
+    { 67, "Hvy frz rain", "Chv g fria"  },
+    { 71, "Lt snow",      "Neve leve"   },
+    { 73, "Snow",         "Neve"        },
+    { 75, "Hvy snow",     "Neve forte"  },
+    { 77, "Snow grains",  "Granizo neve"},
+    { 80, "Showers",      "Pancadas"    },
+    { 81, "Mod showers",  "Pancadas m"  },
+    { 82, "Hvy showers",  "Pancadas f"  },
+    { 85, "Snow shower",  "Neve panc"   },
+    { 86, "Hvy sn showr", "Neve panc f" },
+    { 95, "Thunderstorm", "Trovoada"    },
+    { 96, "Tstm w hail",  "Trovoada g"  },
+    { 99, "Tstm hail",    "Trovoada pg" },
+};
+
+static const uint8_t _wmoCount = sizeof(_wmoTable) / sizeof(_wmoTable[0]);
+
+const char* weatherConditionName(uint8_t lang, uint8_t wmoCode) {
+    // Exact match first
+    for (uint8_t i = 0; i < _wmoCount; i++) {
+        if (_wmoTable[i].code == wmoCode) {
+            return (lang == LANG_PT) ? _wmoTable[i].pt : _wmoTable[i].en;
+        }
+    }
+    // No exact match — fall back to "Clear"
+    return (lang == LANG_PT) ? "Limpo" : "Clear";
+}

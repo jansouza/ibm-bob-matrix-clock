@@ -39,3 +39,9 @@ uint8_t tzTableSize();
 
 // Returns the TZEntry at index i (for enumeration by the web UI).
 const TZEntry* tzTableEntry(uint8_t i);
+
+// ─── WMO weather condition code → localised condition string ─────────────────
+// Returns a short Latin-1 string for the given WMO weathercode (Open-Meteo).
+// Falls back to the English string if lang is not recognised.
+// The returned pointer points to a static string literal — do not free.
+const char* weatherConditionName(uint8_t lang, uint8_t wmoCode);

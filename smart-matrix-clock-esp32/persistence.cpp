@@ -10,6 +10,7 @@
 #include "config.h"
 #include "globals.h"
 #include "locale_data.h"
+#include "data_fetcher.h"
 
 #include <Preferences.h>
 #include <Arduino.h>
@@ -76,6 +77,14 @@ void loadConfig() {
         cfgUiLanguage[UI_LANG_CODE_MAX - 1] = '\0';
     }
 
+    // ── Weather (Phase 4) ──────────────────────────────────────────────────────
+    slotEnabled[2]     = _prefs.getBool(NVS_KEY_WEATHER_EN,   false);
+    cfgWeatherUpdateMs = _prefs.getUInt(NVS_KEY_WEATHER_UPMS, WEATHER_UPDATE_DEFAULT_MS);
+    cfgWeatherLat      = _prefs.getFloat(NVS_KEY_WEATHER_LAT, WEATHER_LAT_DEFAULT);
+    cfgWeatherLon      = _prefs.getFloat(NVS_KEY_WEATHER_LON, WEATHER_LON_DEFAULT);
+    _prefs.getString(NVS_KEY_TEMP_UNIT, cfgTempUnit, WEATHER_TEMP_UNIT_MAX);
+    if (cfgTempUnit[0] == '\0') strncpy(cfgTempUnit, WEATHER_TEMP_UNIT_DEFAULT, WEATHER_TEMP_UNIT_MAX - 1);
+
     _close();
 }
 
@@ -105,6 +114,13 @@ void saveConfig() {
     _prefs.putBool(NVS_KEY_DATE_EN,     cfgDateEnabled);
 
     _prefs.putString(NVS_KEY_UI_LANGUAGE, cfgUiLanguage);
+
+    // ── Weather (Phase 4) ──────────────────────────────────────────────────────
+    _prefs.putBool(NVS_KEY_WEATHER_EN,   slotEnabled[2]);
+    _prefs.putUInt(NVS_KEY_WEATHER_UPMS, cfgWeatherUpdateMs);
+    _prefs.putFloat(NVS_KEY_WEATHER_LAT, cfgWeatherLat);
+    _prefs.putFloat(NVS_KEY_WEATHER_LON, cfgWeatherLon);
+    _prefs.putString(NVS_KEY_TEMP_UNIT,  cfgTempUnit);
 
     _close();
 }
@@ -143,7 +159,7 @@ void factoryReset() {
     slotEnabled[2] = false;
     slotEnabled[3] = false;
 
-    slotIntervalMs[2] = 30000;
+    slotIntervalMs[2] = WEATHER_DISPLAY_DEFAULT_MS;
     slotIntervalMs[3] = 30000;
 
     cfgDateIntervalMs = DATE_INTERVAL_DEFAULT_MS;
@@ -151,4 +167,12 @@ void factoryReset() {
 
     strncpy(cfgUiLanguage, UI_LANG_DEFAULT, UI_LANG_CODE_MAX - 1);
     cfgUiLanguage[UI_LANG_CODE_MAX - 1] = '\0';
+
+    // ── Weather (Phase 4) ──────────────────────────────────────────────────────
+    cfgWeatherLat      = WEATHER_LAT_DEFAULT;
+    cfgWeatherLon      = WEATHER_LON_DEFAULT;
+    cfgWeatherUpdateMs = WEATHER_UPDATE_DEFAULT_MS;
+    strncpy(cfgTempUnit, WEATHER_TEMP_UNIT_DEFAULT, WEATHER_TEMP_UNIT_MAX - 1);
+    cfgTempUnit[WEATHER_TEMP_UNIT_MAX - 1] = '\0';
+    weatherCache = { 0.0f, 0.0f, 0.0f, {0}, false, false, 0 };
 }

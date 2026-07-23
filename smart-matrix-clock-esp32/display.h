@@ -30,3 +30,7 @@ void displayScrollText(const char* latin1Text);
 // Set the AP config message (Latin-1) and start scrolling it immediately.
 // While isApMode() returns true the message will repeat indefinitely.
 void displaySetApMessage(const char* latin1Text);
+
+// Force-show a slot immediately, bypassing the normal rotation timer.
+// slotIndex: 2 = Weather.  Ignored if the slot is disabled or has no cache.
+void displayForceSlot(uint8_t slotIndex);
