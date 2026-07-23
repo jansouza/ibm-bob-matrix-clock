@@ -92,7 +92,7 @@ arduino-cli upload --fqbn esp32:esp32:esp32 --port /dev/ttyACM0 \
   --upload-property upload.speed=115200 smart-matrix-clock-esp32
 
 # Serial monitor (115200 baud)
-arduino-cli monitor --port /dev/ttyUSB0 --config baudrate=115200
+arduino-cli monitor --port /dev/ttyACM0 --config baudrate=115200
 ```
 
 ### Required libraries
@@ -148,10 +148,30 @@ The firmware was developed in **5 incremental phases**, each delivering a functi
 | 1 | Project skeleton + functional clock (NTP, blink) | ✅ Done |
 | 2 | NVS persistence + configurable WiFi + setup AP | ✅ Done |
 | 3 | Web interface + REST API + full clock (date, alert) | ✅ Done |
-| 4 | Weather slot (Open-Meteo) + slot rotation | 🔲 Pending |
-| 5 | Quotes slot (Yahoo Finance) | 🔲 Pending |
+| 4 | Weather slot (Open-Meteo) + slot rotation | ✅ Done |
+| 5 | Quotes slot (Yahoo Finance) | ✅ Done |
 
 Details in [`docs/implementation-plan.md`](docs/implementation-plan.md).
+
+### Enhancements plan
+
+Beyond the 5 core phases, [`docs/enhancements-plan.md`](docs/enhancements-plan.md) tracks a further set of improvements:
+
+| # | Feature | Status |
+|---|---|---|
+| F1 | Seconds clock mode (`HH:MM:SS`) | 🔲 Pending |
+| F2 | Icons/symbols in alert messages | ✅ Done |
+| F3 | Password for the web interface (HTTP Basic Auth) | 🔲 Pending |
+| F4 | Web interface language (pt/en in browser) | ✅ Done |
+| F5 | WiFi network scan in the web interface | 🔲 Pending |
+| F6a | Live alert preview | ✅ Done |
+| F6b | Automatic brightness by time of day | 🔲 Pending |
+| F6c | OTA firmware update | 🔲 Pending |
+| F6d | Alert history | 🔲 Pending |
+| F6e | Slot scheduling by time of day | 🔲 Pending |
+| F6f | Soft reboot via panel | 🔲 Pending |
+
+Details in [`docs/enhancements-plan.md`](docs/enhancements-plan.md).
 
 ---
 

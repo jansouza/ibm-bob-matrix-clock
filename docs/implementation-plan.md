@@ -181,7 +181,7 @@ smart-matrix-clock-esp32/
 
 ---
 
-## Phase 5 — Quotes slot (Yahoo Finance)
+## Phase 5 — Quotes slot (Yahoo Finance) `[x] done`
 
 **Objective:** the Quotes slot enters the rotation, queries Yahoo Finance periodically and shows `SYMBOL: price change%` in scroll, with cache fallback.
 
@@ -196,14 +196,14 @@ smart-matrix-clock-esp32/
 - Cache: array of `QuoteCache { char symbol[12]; float price; float changePercent; bool valid; }` structs in globals, maximum size N (defined in `config.h`).
 - Build display string: `"SYM1: P1 C1%  SYM2: P2 C2%"` with explicit `+`/`-` sign on the change; `*` prefix if cache is stale.
 
-**Status:** `[ ] pending`
+**Status:** `[x] done`
 
 #### 5.2 — Integration into the slot manager
 - Expand `slotRotationTick()`: Quotes slot follows the same pattern as the Weather slot — checks cache, builds string, starts scroll, ends when scroll finishes.
 - Ensure `POST /api/config` accepts and saves: `quotes_enabled`, `quotes_tickers` (comma-separated string), `quotes_update_interval`, `quotes_display_interval`.
 - Ensure `loadConfig()` and `saveConfig()` cover these fields.
 
-**Status:** `[ ] pending`
+**Status:** `[x] done`
 
 ---
 

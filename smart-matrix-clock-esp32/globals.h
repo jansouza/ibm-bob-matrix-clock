@@ -22,6 +22,14 @@ struct WeatherCache {
     uint32_t fetchedAt;                     // millis() of last successful fetch
 };
 
+// ─── Quotes cache (Phase 5) ───────────────────────────────────────────────────
+struct QuoteCache {
+    char     symbol[QUOTES_SYMBOL_MAX];     // e.g. "PETR4.SA"
+    float    price;                         // regularMarketPrice
+    float    changePercent;                 // regularMarketChangePercent
+    bool     valid;                         // true once a successful fetch occurred
+};
+
 // ─── Display settings ─────────────────────────────────────────────────────────
 extern uint8_t  currentBrightness;    // 0–15
 extern uint16_t scrollSpeed;          // ms per scroll frame
@@ -58,3 +66,10 @@ extern float    cfgWeatherLon;        // longitude
 extern uint32_t cfgWeatherUpdateMs;   // fetch interval (ms)
 extern char     cfgTempUnit[];        // "C" or "F"
 extern WeatherCache weatherCache;     // last known weather data
+
+// ─── Quotes configuration (Phase 5) ────────────────────────────────────────────
+extern uint32_t cfgQuotesUpdateMs;                    // fetch interval (ms)
+extern char     cfgQuotesTickers[];                   // raw comma-separated tickers string
+extern QuoteCache quoteCache[QUOTES_MAX_TICKERS];     // last known quote data
+extern uint8_t  quoteCacheCount;                      // number of symbols currently tracked
+extern bool     quotesCacheStale;                     // true if last fetch failed but cache exists

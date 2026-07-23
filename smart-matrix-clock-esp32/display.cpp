@@ -21,6 +21,7 @@
 #include <time.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 // ─── Internal objects ─────────────────────────────────────────────────────────
 
@@ -305,6 +306,29 @@ static bool _buildWeatherString(char* dst, size_t dstLen) {
     return true;
 }
 
+// Build the quotes display string into dst[dstLen].
+// Format: "SYM1: 38.42 +1.23%  SYM2: 189.75 -0.45%" (or with * prefix if stale).
+// Returns false if there is no cached data (slot should be skipped).
+static bool _buildQuotesString(char* dst, size_t dstLen) {
+    if (quoteCacheCount == 0) return false;
+
+    dst[0] = '\0';
+    if (quotesCacheStale) strncat(dst, "*", dstLen - strlen(dst) - 1);
+
+    for (uint8_t i = 0; i < quoteCacheCount; i++) {
+        if (!quoteCache[i].valid) continue;
+        char entry[48];
+        snprintf(entry, sizeof(entry), "%s%s: %.2f %c%.2f%%",
+                 (i > 0) ? "  " : "",
+                 quoteCache[i].symbol,
+                 quoteCache[i].price,
+                 (quoteCache[i].changePercent >= 0) ? '+' : '-',
+                 fabsf(quoteCache[i].changePercent));
+        strncat(dst, entry, dstLen - strlen(dst) - 1);
+    }
+    return true;
+}
+
 // Start a slot scroll immediately (shared by timer-driven and forced paths).
 // Returns true if a scroll was started.
 static bool _startSlotScroll(uint8_t slot) {
@@ -314,6 +338,15 @@ static bool _startSlotScroll(uint8_t slot) {
             _slotStartMs = millis();
             _slotActive  = true;
             activeSlot   = 2;
+            _startScrollAt(buf, scrollSpeed);
+            return true;
+        }
+    } else if (slot == 3) {
+        char buf[SCROLL_BUF_LEN];
+        if (_buildQuotesString(buf, sizeof(buf))) {
+            _slotStartMs = millis();
+            _slotActive  = true;
+            activeSlot   = 3;
             _startScrollAt(buf, scrollSpeed);
             return true;
         }
@@ -345,10 +378,16 @@ static void _slotRotationTick() {
         return;
     }
 
-    // Timer-driven rotation: slot 2 = Weather (slot 3 = Quotes, Phase 5).
+    // Timer-driven rotation: slot 2 = Weather, slot 3 = Quotes.
     if (slotEnabled[2] && weatherCache.valid) {
         if (now - _slotStartMs >= slotIntervalMs[2]) {
             _startSlotScroll(2);
+            return;
+        }
+    }
+    if (slotEnabled[3] && quoteCacheCount > 0) {
+        if (now - _slotStartMs >= slotIntervalMs[3]) {
+            _startSlotScroll(3);
         }
     }
 }
@@ -495,7 +534,7 @@ void displayTick() {
         }
     }
 
-    // ── Slot rotation (weather slot; quotes in Phase 5) ───────────────────────
+    // ── Slot rotation (weather + quotes slots) ────────────────────────────────
     _slotRotationTick();
     if (_scrolling) return;   // rotation just started a scroll — done this tick
 

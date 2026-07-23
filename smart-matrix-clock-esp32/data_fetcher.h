@@ -9,11 +9,14 @@
  */
 
 // Called every loop() iteration.
-// Checks the weather (and, in Phase 5, quotes) fetch timers; performs the
-// HTTP request when the interval fires.  Never blocks longer than the
-// configured HTTP timeout.
+// Checks the weather and quotes fetch timers; performs the HTTP request when
+// the interval fires.  Never blocks longer than the configured HTTP timeout.
 void fetcherTick();
 
 // Trigger an immediate weather fetch on the next fetcherTick() call.
 // Useful after saving new coordinates or enabling the slot.
 void fetcherReset();
+
+// Trigger an immediate quotes fetch on the next fetcherTick() call.
+// Useful after saving new tickers or enabling the slot.
+void quotesFetcherReset();

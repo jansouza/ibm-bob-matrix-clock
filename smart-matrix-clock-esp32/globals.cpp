@@ -45,3 +45,10 @@ float    cfgWeatherLon     = WEATHER_LON_DEFAULT;
 uint32_t cfgWeatherUpdateMs = WEATHER_UPDATE_DEFAULT_MS;
 char     cfgTempUnit[WEATHER_TEMP_UNIT_MAX] = WEATHER_TEMP_UNIT_DEFAULT;
 WeatherCache weatherCache  = { 0.0f, 0.0f, 0.0f, {0}, false, false, 0 };
+
+// ─── Quotes configuration (Phase 5) ────────────────────────────────────────────
+uint32_t cfgQuotesUpdateMs = QUOTES_UPDATE_DEFAULT_MS;
+char     cfgQuotesTickers[QUOTES_TICKERS_MAX] = {0};
+QuoteCache quoteCache[QUOTES_MAX_TICKERS] = {};
+uint8_t  quoteCacheCount   = 0;
+bool     quotesCacheStale  = false;

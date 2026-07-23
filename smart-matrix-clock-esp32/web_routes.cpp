@@ -24,6 +24,7 @@
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -90,6 +91,26 @@ static void _handleGetStatus(AsyncWebServerRequest* req) {
         doc["weather_preview"] = preview;
     }
 
+    // Quotes cache snapshot for the web panel
+    doc["quotes_cache_valid"] = quoteCacheCount > 0;
+    doc["quotes_cache_stale"] = quotesCacheStale;
+    if (quoteCacheCount > 0) {
+        char preview[SCROLL_BUF_LEN];
+        preview[0] = '\0';
+        if (quotesCacheStale) strncat(preview, "*", sizeof(preview) - strlen(preview) - 1);
+        for (uint8_t i = 0; i < quoteCacheCount; i++) {
+            char entry[48];
+            snprintf(entry, sizeof(entry), "%s%s: %.2f %c%.2f%%",
+                     (i > 0) ? "  " : "",
+                     quoteCache[i].symbol,
+                     quoteCache[i].price,
+                     (quoteCache[i].changePercent >= 0) ? '+' : '-',
+                     fabsf(quoteCache[i].changePercent));
+            strncat(preview, entry, sizeof(preview) - strlen(preview) - 1);
+        }
+        doc["quotes_preview"] = preview;
+    }
+
     String body;
     serializeJson(doc, body);
     req->send(200, "application/json", body);
@@ -117,9 +138,9 @@ static void _handleGetConfig(AsyncWebServerRequest* req) {
     doc["temp_unit"]          = cfgTempUnit;
 
     doc["quotes_enabled"]    = slotEnabled[3];
-    doc["quotes_update_ms"]  = slotIntervalMs[3];
+    doc["quotes_update_ms"]  = cfgQuotesUpdateMs;
     doc["quotes_display_ms"] = slotIntervalMs[3];
-    doc["quotes_tickers"]    = "";   // Phase 5 will populate
+    doc["quotes_tickers"]    = cfgQuotesTickers;
 
     String body;
     serializeJson(doc, body);
@@ -270,8 +291,30 @@ static void _handlePostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t 
     }
     if (doc["quotes_display_ms"].is<long>()) {
         long v = doc["quotes_display_ms"].as<long>();
-        if (v < 5000 || v > 300000) { _sendError(req, 400, "quotes_display_ms out of range"); return; }
+        if (v < (long)QUOTES_DISPLAY_MIN_MS || v > (long)QUOTES_DISPLAY_MAX_MS) {
+            _sendError(req, 400, "quotes_display_ms out of range"); return;
+        }
         slotIntervalMs[3] = (uint32_t)v;
+        changed = true;
+    }
+    if (doc["quotes_update_ms"].is<long>()) {
+        long v = doc["quotes_update_ms"].as<long>();
+        if (v < (long)QUOTES_UPDATE_MIN_MS || v > (long)QUOTES_UPDATE_MAX_MS) {
+            _sendError(req, 400, "quotes_update_ms out of range"); return;
+        }
+        cfgQuotesUpdateMs = (uint32_t)v;
+        changed = true;
+    }
+    if (doc["quotes_tickers"].is<const char*>()) {
+        const char* v = doc["quotes_tickers"].as<const char*>();
+        if (strlen(v) >= QUOTES_TICKERS_MAX) {
+            _sendError(req, 400, "quotes_tickers too long"); return;
+        }
+        strncpy(cfgQuotesTickers, v, QUOTES_TICKERS_MAX - 1);
+        cfgQuotesTickers[QUOTES_TICKERS_MAX - 1] = '\0';
+        quoteCacheCount  = 0;   // stale symbol list — drop cache until next fetch
+        quotesCacheStale = false;
+        quotesFetcherReset();
         changed = true;
     }
 
@@ -404,6 +447,9 @@ static void _handlePostPreview(AsyncWebServerRequest* req, uint8_t* data, size_t
     if (slot == 2) {
         if (!slotEnabled[2])        { _sendError(req, 400, "Weather slot is disabled"); return; }
         if (!weatherCache.valid)    { _sendError(req, 400, "No weather data cached yet"); return; }
+    } else if (slot == 3) {
+        if (!slotEnabled[3])        { _sendError(req, 400, "Quotes slot is disabled"); return; }
+        if (quoteCacheCount == 0)   { _sendError(req, 400, "No quotes data cached yet"); return; }
     }
 
     displayForceSlot((uint8_t)slot);

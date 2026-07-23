@@ -366,7 +366,12 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
       </div>
     </div>
     <div class="actions">
+      <button class="btn btn-secondary" id="btn-preview-quotes" data-i18n="quotes.previewOnDisplay">Preview on display</button>
       <button class="btn btn-primary" id="btn-save-quotes" data-i18n="common.saveSettings">Save settings</button>
+    </div>
+    <div class="card" id="quotes-cache-card" style="margin-top:14px">
+      <h2 data-i18n="quotes.cacheTitle">Last data</h2>
+      <div id="quotes-cache-info" style="font-size:13px;color:#8b949e" data-i18n="quotes.noCache">No data yet</div>
     </div>
   </div>
 
@@ -463,6 +468,10 @@ var I18N = {
     'quotes.assets': 'Assets (tickers)',
     'quotes.tickersLabel': 'Comma-separated tickers',
     'quotes.tickersHint': 'E.g.: PETR4.SA, AAPL, BTC-USD &mdash; max. 8 tickers',
+    'quotes.previewOnDisplay': 'Preview on display',
+    'quotes.cacheTitle': 'Last data',
+    'quotes.noCache': 'No data yet — enable slot and wait for first fetch',
+    'quotes.cacheStale': '* Stale — last fetch failed',
     'network.currentConnection': 'Current connection',
     'network.status': 'Status',
     'network.newWifi': 'New WiFi network',
@@ -536,6 +545,10 @@ var I18N = {
     'quotes.assets': 'Ativos (tickers)',
     'quotes.tickersLabel': 'Tickers separados por v&#237;rgula',
     'quotes.tickersHint': 'Ex.: PETR4.SA, AAPL, BTC-USD &mdash; m&#225;x. 8 tickers',
+    'quotes.previewOnDisplay': 'Mostrar no display agora',
+    'quotes.cacheTitle': '&#218;ltimos dados',
+    'quotes.noCache': 'Sem dados ainda &#8212; habilite o slot e aguarde o primeiro fetch',
+    'quotes.cacheStale': '* Desatualizado &#8212; &#250;ltimo fetch falhou',
     'network.currentConnection': 'Conex&#227;o atual',
     'network.status': 'Status',
     'network.newWifi': 'Nova rede WiFi',
@@ -732,6 +745,22 @@ function pollStatus() {
     if (previewBtn) {
       previewBtn.disabled = !s.weather_cache_valid;
       previewBtn.style.opacity = s.weather_cache_valid ? '1' : '0.4';
+    }
+
+    // Quotes cache info
+    var qCacheEl = document.getElementById('quotes-cache-info');
+    var qPreviewBtn = document.getElementById('btn-preview-quotes');
+    if (qCacheEl) {
+      if (s.quotes_cache_valid) {
+        var qStaleNote = s.quotes_cache_stale ? ' <span style="color:#e3b341">(' + t('quotes.cacheStale') + ')</span>' : '';
+        qCacheEl.innerHTML = s.quotes_preview + qStaleNote;
+      } else {
+        qCacheEl.textContent = t('quotes.noCache');
+      }
+    }
+    if (qPreviewBtn) {
+      qPreviewBtn.disabled = !s.quotes_cache_valid;
+      qPreviewBtn.style.opacity = s.quotes_cache_valid ? '1' : '0.4';
     }
   }).catch(function(){});
 }
@@ -988,6 +1017,14 @@ document.getElementById('btn-save-weather').addEventListener('click', function()
 document.getElementById('btn-preview-weather').addEventListener('click', function() {
   fetch('/api/preview', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({slot: 2})}).then(function(r){ return r.json(); }).then(function(r) {
+    showToast(r.ok ? t('toast.previewSent') : (t('toast.error') + (r.error || '?')));
+  }).catch(function(){ showToast(t('toast.networkError')); });
+});
+
+// ── Preview quotes on display ────────────────────────────────────────────────
+document.getElementById('btn-preview-quotes').addEventListener('click', function() {
+  fetch('/api/preview', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({slot: 3})}).then(function(r){ return r.json(); }).then(function(r) {
     showToast(r.ok ? t('toast.previewSent') : (t('toast.error') + (r.error || '?')));
   }).catch(function(){ showToast(t('toast.networkError')); });
 });

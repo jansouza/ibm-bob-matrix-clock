@@ -28,6 +28,9 @@
 static uint32_t _lastWeatherFetch = 0;   // millis() of last fetch attempt; 0 = never
 static bool     _forceFetch       = true; // force fetch on first enabled tick
 
+static uint32_t _lastQuotesFetch  = 0;   // millis() of last quotes fetch attempt; 0 = never
+static bool     _forceQuotesFetch = true; // force fetch on first enabled tick
+
 // ─── fetchWeather ─────────────────────────────────────────────────────────────
 
 static void _fetchWeather() {
@@ -116,22 +119,146 @@ static void _fetchWeather() {
                   cond, tmin, tmax);
 }
 
+// ─── fetchQuotes ──────────────────────────────────────────────────────────────
+
+// Split cfgQuotesTickers ("PETR4.SA,AAPL") into up to QUOTES_MAX_TICKERS
+// symbols. Returns the number of symbols found.
+static uint8_t _splitTickers(char (*symbols)[QUOTES_SYMBOL_MAX]) {
+    char buf[QUOTES_TICKERS_MAX];
+    strncpy(buf, cfgQuotesTickers, sizeof(buf) - 1);
+    buf[sizeof(buf) - 1] = '\0';
+
+    uint8_t count = 0;
+    char* saveptr = nullptr;
+    char* tok = strtok_r(buf, ",", &saveptr);
+    while (tok != nullptr && count < QUOTES_MAX_TICKERS) {
+        // Trim leading/trailing whitespace
+        while (*tok == ' ') tok++;
+        char* end = tok + strlen(tok) - 1;
+        while (end > tok && *end == ' ') { *end = '\0'; end--; }
+
+        if (tok[0] != '\0') {
+            strncpy(symbols[count], tok, QUOTES_SYMBOL_MAX - 1);
+            symbols[count][QUOTES_SYMBOL_MAX - 1] = '\0';
+            count++;
+        }
+        tok = strtok_r(nullptr, ",", &saveptr);
+    }
+    return count;
+}
+
+// Fetch a single symbol from the chart endpoint (no auth/crumb required,
+// unlike v7/finance/quote which now 401s without a session cookie).
+// Returns true and fills price/changePercent on success.
+static bool _fetchOneQuote(const char* symbol, float* price, float* changePercent) {
+    char url[192];
+    snprintf(url, sizeof(url),
+        "https://query1.finance.yahoo.com/v8/finance/chart/%s", symbol);
+
+    HTTPClient http;
+    http.setTimeout(5000);   // 5 s timeout — hard rule from AGENTS.md
+    http.begin(url);
+    // Yahoo rejects requests with no User-Agent (or the default ESP32 one).
+    http.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+    int code = http.GET();
+
+    if (code != 200) {
+        Serial.printf("[Quotes] %s HTTP error %d\n", symbol, code);
+        http.end();
+        return false;
+    }
+
+    String body = http.getString();
+    http.end();
+
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, body);
+    if (err) {
+        Serial.printf("[Quotes] %s JSON parse error: %s\n", symbol, err.c_str());
+        return false;
+    }
+
+    JsonObject meta = doc["chart"]["result"][0]["meta"];
+    if (meta.isNull() || !meta["regularMarketPrice"].is<float>()) {
+        Serial.printf("[Quotes] %s: no meta in response\n", symbol);
+        return false;
+    }
+
+    float last = meta["regularMarketPrice"].as<float>();
+    float prevClose = meta["previousClose"] | meta["chartPreviousClose"] | last;
+
+    *price = last;
+    *changePercent = (prevClose != 0.0f) ? ((last - prevClose) / prevClose * 100.0f) : 0.0f;
+    return true;
+}
+
+static void _fetchQuotes() {
+    if (WiFi.status() != WL_CONNECTED) return;
+
+    char symbols[QUOTES_MAX_TICKERS][QUOTES_SYMBOL_MAX];
+    uint8_t count = _splitTickers(symbols);
+    if (count == 0) return;
+
+    uint8_t newCount = 0;
+    bool anyFailed = false;
+
+    for (uint8_t i = 0; i < count; i++) {
+        float price, changePercent;
+        if (_fetchOneQuote(symbols[i], &price, &changePercent)) {
+            strncpy(quoteCache[newCount].symbol, symbols[i], QUOTES_SYMBOL_MAX - 1);
+            quoteCache[newCount].symbol[QUOTES_SYMBOL_MAX - 1] = '\0';
+            quoteCache[newCount].price         = price;
+            quoteCache[newCount].changePercent = changePercent;
+            quoteCache[newCount].valid         = true;
+            newCount++;
+        } else {
+            anyFailed = true;
+        }
+    }
+
+    if (newCount == 0) {
+        if (quoteCacheCount > 0) quotesCacheStale = true;
+        return;
+    }
+
+    quoteCacheCount  = newCount;
+    // Partial failure (some symbols fetched, some didn't) still counts as
+    // stale so the panel/display flag the data as incomplete.
+    quotesCacheStale = anyFailed;
+
+    Serial.printf("[Quotes] Updated %u/%u symbols\n", newCount, count);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 void fetcherReset() {
     _forceFetch = true;
 }
 
+void quotesFetcherReset() {
+    _forceQuotesFetch = true;
+}
+
 void fetcherTick() {
-    // Only fetch if the weather slot is enabled
-    if (!slotEnabled[2]) return;
-
     uint32_t now = millis();
-    bool timerFired = (now - _lastWeatherFetch >= cfgWeatherUpdateMs);
 
-    if (_forceFetch || timerFired) {
-        _lastWeatherFetch = now;
-        _forceFetch       = false;
-        _fetchWeather();
+    // Only fetch if the weather slot is enabled
+    if (slotEnabled[2]) {
+        bool timerFired = (now - _lastWeatherFetch >= cfgWeatherUpdateMs);
+        if (_forceFetch || timerFired) {
+            _lastWeatherFetch = now;
+            _forceFetch       = false;
+            _fetchWeather();
+        }
+    }
+
+    // Only fetch if the quotes slot is enabled
+    if (slotEnabled[3]) {
+        bool timerFired = (now - _lastQuotesFetch >= cfgQuotesUpdateMs);
+        if (_forceQuotesFetch || timerFired) {
+            _lastQuotesFetch  = now;
+            _forceQuotesFetch = false;
+            _fetchQuotes();
+        }
     }
 }

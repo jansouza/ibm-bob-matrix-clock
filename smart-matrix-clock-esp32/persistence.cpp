@@ -65,8 +65,8 @@ void loadConfig() {
     slotEnabled[2] = _prefs.getBool(NVS_KEY_SLOT2_EN, false);
     slotEnabled[3] = _prefs.getBool(NVS_KEY_SLOT3_EN, false);
 
-    slotIntervalMs[2] = _prefs.getUInt(NVS_KEY_SLOT2_MS, 30000);
-    slotIntervalMs[3] = _prefs.getUInt(NVS_KEY_SLOT3_MS, 30000);
+    slotIntervalMs[2] = _prefs.getUInt(NVS_KEY_SLOT2_MS, WEATHER_DISPLAY_DEFAULT_MS);
+    slotIntervalMs[3] = _prefs.getUInt(NVS_KEY_SLOT3_MS, QUOTES_DISPLAY_DEFAULT_MS);
 
     cfgDateIntervalMs  = _prefs.getUInt(NVS_KEY_DATE_INT_MS, DATE_INTERVAL_DEFAULT_MS);
     cfgDateEnabled     = _prefs.getBool(NVS_KEY_DATE_EN, true);
@@ -84,6 +84,11 @@ void loadConfig() {
     cfgWeatherLon      = _prefs.getFloat(NVS_KEY_WEATHER_LON, WEATHER_LON_DEFAULT);
     _prefs.getString(NVS_KEY_TEMP_UNIT, cfgTempUnit, WEATHER_TEMP_UNIT_MAX);
     if (cfgTempUnit[0] == '\0') strncpy(cfgTempUnit, WEATHER_TEMP_UNIT_DEFAULT, WEATHER_TEMP_UNIT_MAX - 1);
+
+    // ── Quotes (Phase 5) ────────────────────────────────────────────────────────
+    slotEnabled[3]    = _prefs.getBool(NVS_KEY_QUOTES_EN,   false);
+    cfgQuotesUpdateMs = _prefs.getUInt(NVS_KEY_QUOTES_UPMS, QUOTES_UPDATE_DEFAULT_MS);
+    _prefs.getString(NVS_KEY_QUOTES_TICKERS, cfgQuotesTickers, QUOTES_TICKERS_MAX);
 
     _close();
 }
@@ -121,6 +126,11 @@ void saveConfig() {
     _prefs.putFloat(NVS_KEY_WEATHER_LAT, cfgWeatherLat);
     _prefs.putFloat(NVS_KEY_WEATHER_LON, cfgWeatherLon);
     _prefs.putString(NVS_KEY_TEMP_UNIT,  cfgTempUnit);
+
+    // ── Quotes (Phase 5) ────────────────────────────────────────────────────────
+    _prefs.putBool(NVS_KEY_QUOTES_EN,   slotEnabled[3]);
+    _prefs.putUInt(NVS_KEY_QUOTES_UPMS, cfgQuotesUpdateMs);
+    _prefs.putString(NVS_KEY_QUOTES_TICKERS, cfgQuotesTickers);
 
     _close();
 }
@@ -160,7 +170,7 @@ void factoryReset() {
     slotEnabled[3] = false;
 
     slotIntervalMs[2] = WEATHER_DISPLAY_DEFAULT_MS;
-    slotIntervalMs[3] = 30000;
+    slotIntervalMs[3] = QUOTES_DISPLAY_DEFAULT_MS;
 
     cfgDateIntervalMs = DATE_INTERVAL_DEFAULT_MS;
     cfgDateEnabled    = true;
@@ -175,4 +185,11 @@ void factoryReset() {
     strncpy(cfgTempUnit, WEATHER_TEMP_UNIT_DEFAULT, WEATHER_TEMP_UNIT_MAX - 1);
     cfgTempUnit[WEATHER_TEMP_UNIT_MAX - 1] = '\0';
     weatherCache = { 0.0f, 0.0f, 0.0f, {0}, false, false, 0 };
+
+    // ── Quotes (Phase 5) ────────────────────────────────────────────────────────
+    cfgQuotesUpdateMs = QUOTES_UPDATE_DEFAULT_MS;
+    cfgQuotesTickers[0] = '\0';
+    for (uint8_t i = 0; i < QUOTES_MAX_TICKERS; i++) quoteCache[i] = { {0}, 0.0f, 0.0f, false };
+    quoteCacheCount  = 0;
+    quotesCacheStale = false;
 }

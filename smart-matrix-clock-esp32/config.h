@@ -124,3 +124,20 @@
 #define NVS_KEY_WEATHER_LAT   "weather_lat"
 #define NVS_KEY_WEATHER_LON   "weather_lon"
 #define NVS_KEY_TEMP_UNIT     "temp_unit"
+
+// ─── Quotes slot (Phase 5) ─────────────────────────────────────────────────────
+#define QUOTES_UPDATE_DEFAULT_MS    600000UL  // fetch interval: 10 minutes
+#define QUOTES_UPDATE_MIN_MS         60000UL  // minimum 1 minute
+#define QUOTES_UPDATE_MAX_MS       3600000UL  // maximum 1 hour
+#define QUOTES_DISPLAY_DEFAULT_MS    30000UL  // display slot duration: 30 s
+#define QUOTES_DISPLAY_MIN_MS         5000UL
+#define QUOTES_DISPLAY_MAX_MS       300000UL
+
+#define QUOTES_MAX_TICKERS       8    // maximum number of symbols
+#define QUOTES_SYMBOL_MAX        12   // max chars per symbol (incl. null)
+#define QUOTES_TICKERS_MAX       120  // max length of the comma-separated tickers string (incl. null)
+
+// NVS keys — quotes
+#define NVS_KEY_QUOTES_EN      "quotes_en"
+#define NVS_KEY_QUOTES_UPMS    "quotes_upms"
+#define NVS_KEY_QUOTES_TICKERS "quotes_tick"
