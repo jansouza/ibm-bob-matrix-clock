@@ -114,9 +114,15 @@ Updates one or more configuration fields. Only fields present in the body are pr
 | Field | Type | Range | Description |
 |---|---|---|---|
 | `weather_enabled` | bool | — | Enable/disable the weather slot (slot 2) |
+| `weather_update_ms` | int | 300000–86400000 | Weather fetch interval (ms) |
 | `weather_display_ms` | int | 5000–300000 | Weather slot display duration (ms) |
+| `weather_lat` | float | -90–90 | Latitude used for weather lookups |
+| `weather_lon` | float | -180–180 | Longitude used for weather lookups |
+| `temp_unit` | string | `"C"` or `"F"` | Temperature unit for the weather slot |
 | `quotes_enabled` | bool | — | Enable/disable the quotes slot (slot 3) |
 | `quotes_display_ms` | int | 5000–300000 | Quotes slot display duration (ms) |
+
+> **Note:** the web panel's "Search city or postal code" field (Weather tab) is a browser-side convenience only — it queries the public Open-Meteo Geocoding API (`https://geocoding-api.open-meteo.com/v1/search`) directly from JavaScript to resolve a place name to coordinates, then fills `weather_lat`/`weather_lon` before the normal `POST /api/config` save. It is not a firmware endpoint and adds no new route.
 
 #### Normal response `200`:
 
@@ -350,6 +356,51 @@ curl -X POST http://192.168.1.42/api/wifi \
 
 ---
 
+### `POST /api/preview`
+
+Force-shows a slot on the display immediately, bypassing the rotation timer. Used by the web panel's "Preview on display" buttons.
+
+**Content-Type:** `application/json`
+
+#### Body
+
+```json
+{ "slot": 2 }
+```
+
+| Field | Type | Required | Range | Description |
+|---|---|---|---|---|
+| `slot` | int | **yes** | `2` or `3` | Slot to force-show (`2` = Weather, `3` = Quotes) |
+
+The target slot must be enabled and have a valid cached value, otherwise the request fails.
+
+#### Response `200`:
+
+```json
+{ "ok": true }
+```
+
+#### Examples
+
+```bash
+# Preview the weather slot
+curl -X POST http://192.168.1.42/api/preview \
+  -H "Content-Type: application/json" \
+  -d '{"slot": 2}'
+```
+
+#### Possible errors
+
+| Code | Message | Cause |
+|---|---|---|
+| 400 | `"Invalid JSON"` | Request body is not valid JSON |
+| 400 | `"Missing 'slot' field"` | `slot` field absent |
+| 400 | `"slot must be 2 (weather) or 3 (quotes)"` | `slot` outside the valid range |
+| 400 | `"Weather slot is disabled"` | `slot: 2` requested but `weather_enabled` is `false` |
+| 400 | `"No weather data cached yet"` | `slot: 2` requested before the first successful fetch |
+
+---
+
 ## General error behaviour
 
 Any unmapped route returns:
@@ -387,5 +438,6 @@ Connect to this network and open `http://192.168.4.1` to configure WiFi via the 
 | POST | `/api/alert` | Send an alert message to the display |
 | GET | `/api/timezones` | List of supported timezones |
 | POST | `/api/wifi` | Save WiFi credentials and reboot |
+| POST | `/api/preview` | Force-show a slot on the display immediately |
 
 > **Note:** none of the endpoints currently require authentication — anyone on the same network as the device can call them. An API-key mechanism was implemented and later removed because it broke the web interface's own write actions (see [`docs/enhancements-plan.md`](enhancements-plan.md), Sub-Task 3, for the planned replacement).

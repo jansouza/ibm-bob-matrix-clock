@@ -16,7 +16,7 @@ Arduino/ESP32 firmware for a MAX7219 LED matrix clock with WiFi, web panel and R
 |---|---|
 | 🕐 **Clock** | Continuous base mode — `HH:MM` with blinking colon, date in periodic scroll |
 | 🔔 **Alert** | One-off message sent via REST API or web panel, displayed once then discarded |
-| 🌤️ **Weather** | Temperature, condition and min/max of the day via [Open-Meteo](https://open-meteo.com/) (no API key required) |
+| 🌤️ **Weather** | Temperature, condition and min/max of the day via [Open-Meteo](https://open-meteo.com/) (no API key required). The web panel includes a city/postal-code search (Open-Meteo Geocoding API) to set latitude/longitude without typing coordinates manually |
 | 📈 **Quotes** | Price and percentage change of configurable assets via Yahoo Finance |
 
 ### Technical highlights
@@ -126,6 +126,7 @@ No authentication is required on any endpoint in this version — anyone on the 
 | `POST` | `/api/config` | Update settings |
 | `POST` | `/api/alert` | Send an alert message to the display |
 | `POST` | `/api/wifi` | Save new WiFi credentials and reboot |
+| `POST` | `/api/preview` | Force-show a slot on the display immediately |
 
 **Example — send alert:**
 ```bash

@@ -21,8 +21,8 @@
 #define NUM_MODULES         4    // number of chained MAX7219 8×8 modules
 #define DISPLAY_HARDWARE    MD_MAX72XX::FC16_HW
 
-#define DEFAULT_BRIGHTNESS       4    // 0–15
-#define DEFAULT_SCROLL_SPEED_MS  50   // ms per scroll frame (10–200)
+#define DEFAULT_BRIGHTNESS       2    // 0–15
+#define DEFAULT_SCROLL_SPEED_MS  70   // ms per scroll frame (10–200)
 
 // ─── Text buffer ──────────────────────────────────────────────────────────────
 #define MAX_ALERT_LEN  128   // max chars for alert message (incl. null)
@@ -42,7 +42,7 @@
 // ─── NTP ──────────────────────────────────────────────────────────────────────
 #define NTP_SERVER_DEFAULT      "pool.ntp.org"
 #define NTP_SERVER_MAX          64
-#define NTP_TIMEZONE_DEFAULT    "America/Sao_Paulo"
+#define NTP_TIMEZONE_DEFAULT    "UTC"
 #define NTP_TIMEZONE_MAX        48
 #define NTP_RESYNC_MS           3600000UL  // re-sync every 1 hour
 #define NTP_CHECK_INTERVAL_MS   500        // how often ntpTick() polls for sync
@@ -53,7 +53,7 @@
 
 // ─── Locale ───────────────────────────────────────────────────────────────────
 #define LANG_CODE_MAX   4    // "pt\0" or "en\0"
-#define LANG_DEFAULT    "pt"
+#define LANG_DEFAULT    "en"
 
 // ─── Web UI language ───────────────────────────────────────────────────────────
 // Separate from LANG_DEFAULT/cfgLanguage above, which only controls the
@@ -104,3 +104,23 @@
 
 // ─── Restart ──────────────────────────────────────────────────────────────────
 #define RESTART_DELAY_MS  1500   // default deferred restart delay
+
+// ─── Weather slot (Phase 4) ───────────────────────────────────────────────────
+#define WEATHER_UPDATE_DEFAULT_MS   600000UL  // fetch interval: 10 minutes
+#define WEATHER_UPDATE_MIN_MS        60000UL  // minimum 1 minute
+#define WEATHER_UPDATE_MAX_MS      3600000UL  // maximum 1 hour
+#define WEATHER_DISPLAY_DEFAULT_MS   30000UL  // display slot duration: 30 s
+#define WEATHER_DISPLAY_MIN_MS        5000UL
+#define WEATHER_DISPLAY_MAX_MS      300000UL
+#define WEATHER_LAT_DEFAULT           -23.55f  // São Paulo
+#define WEATHER_LON_DEFAULT           -46.63f
+#define WEATHER_TEMP_UNIT_DEFAULT     "C"     // "C" or "F"
+#define WEATHER_TEMP_UNIT_MAX          3      // "C\0" or "F\0"
+#define WEATHER_CONDITION_MAX         24      // max chars for condition string
+
+// NVS keys — weather
+#define NVS_KEY_WEATHER_EN    "weather_en"
+#define NVS_KEY_WEATHER_UPMS  "weather_upms"
+#define NVS_KEY_WEATHER_LAT   "weather_lat"
+#define NVS_KEY_WEATHER_LON   "weather_lon"
+#define NVS_KEY_TEMP_UNIT     "temp_unit"

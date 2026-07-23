@@ -165,19 +165,19 @@ smart-matrix-clock-esp32/
 - Implement `weathercode` → condition string mapping (e.g.: 0→`Clear`, 1→`Cloudy`, 61→`Rain`, etc.) — table in `locale_data` by language.
 - Cache: struct `WeatherCache { float temp; float minTemp; float maxTemp; char condition[20]; bool valid; uint32_t fetchedAt; }` in globals.
 
-**Status:** `[ ] pending`
+**Status:** `[x] done`
 
 #### 4.2 — Slot Rotation Manager
 - Expand [`display.cpp`](smart-matrix-clock-esp32/display.cpp): implement `slotRotationTick()` — controls which slot is active based on `millis()` and `slotIntervalMs[]`; skips disabled slots; skips slots without valid cache; when switching slots, triggers rendering of the new slot.
 - Integrate into `displayTick()`: if the active slot is Weather, build the string `"TEMP°U COND MinX MaxY"` (with `*` prefix if cache is stale) and start scroll. When the scroll finishes, the slot ends and the manager returns to Clock.
 
-**Status:** `[ ] pending`
+**Status:** `[x] done`
 
 #### 4.3 — Weather configuration in the panel and persistence
 - Ensure `POST /api/config` accepts and saves: `weather_enabled`, `weather_lat`, `weather_lon`, `weather_update_interval`, `weather_display_interval`, `temp_unit`.
 - Ensure `loadConfig()` and `saveConfig()` cover these fields.
 
-**Status:** `[ ] pending`
+**Status:** `[x] done`
 
 ---
 
