@@ -139,11 +139,17 @@ static void _handleGetConfig(AsyncWebServerRequest* req) {
     doc["weather_lat"]        = cfgWeatherLat;
     doc["weather_lon"]        = cfgWeatherLon;
     doc["temp_unit"]          = cfgTempUnit;
+    doc["weather_sched_start"] = slotScheduleStartMin[2];
+    doc["weather_sched_end"]   = slotScheduleEndMin[2];
+    doc["weather_sched_days"]  = slotScheduleDaysMask[2];
 
     doc["quotes_enabled"]    = slotEnabled[3];
     doc["quotes_update_ms"]  = cfgQuotesUpdateMs;
     doc["quotes_display_ms"] = slotIntervalMs[3];
     doc["quotes_tickers"]    = cfgQuotesTickers;
+    doc["quotes_sched_start"] = slotScheduleStartMin[3];
+    doc["quotes_sched_end"]   = slotScheduleEndMin[3];
+    doc["quotes_sched_days"]  = slotScheduleDaysMask[3];
 
     String body;
     serializeJson(doc, body);
@@ -286,6 +292,23 @@ static void _handlePostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t 
         fetcherReset();
         changed = true;
     }
+    if (doc["weather_sched_start"].is<int>() && doc["weather_sched_end"].is<int>()) {
+        int s = doc["weather_sched_start"].as<int>();
+        int e = doc["weather_sched_end"].as<int>();
+        if (s < SLOT_SCHEDULE_MIN_MINUTE || s > SLOT_SCHEDULE_MAX_MINUTE ||
+            e < SLOT_SCHEDULE_MIN_MINUTE || e > SLOT_SCHEDULE_MAX_MINUTE) {
+            _sendError(req, 400, "weather_sched_start/end must be 0-1439"); return;
+        }
+        slotScheduleStartMin[2] = (uint16_t)s;
+        slotScheduleEndMin[2]   = (uint16_t)e;
+        changed = true;
+    }
+    if (doc["weather_sched_days"].is<int>()) {
+        int d = doc["weather_sched_days"].as<int>();
+        if (d < 0 || d > SLOT_SCHEDULE_DAYS_MAX) { _sendError(req, 400, "weather_sched_days must be 0-127"); return; }
+        slotScheduleDaysMask[2] = (uint8_t)d;
+        changed = true;
+    }
 
     // ── quotes_enabled ────────────────────────────────────────────────────────
     if (doc["quotes_enabled"].is<bool>()) {
@@ -318,6 +341,23 @@ static void _handlePostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t 
         quoteCacheCount  = 0;   // stale symbol list — drop cache until next fetch
         quotesCacheStale = false;
         quotesFetcherReset();
+        changed = true;
+    }
+    if (doc["quotes_sched_start"].is<int>() && doc["quotes_sched_end"].is<int>()) {
+        int s = doc["quotes_sched_start"].as<int>();
+        int e = doc["quotes_sched_end"].as<int>();
+        if (s < SLOT_SCHEDULE_MIN_MINUTE || s > SLOT_SCHEDULE_MAX_MINUTE ||
+            e < SLOT_SCHEDULE_MIN_MINUTE || e > SLOT_SCHEDULE_MAX_MINUTE) {
+            _sendError(req, 400, "quotes_sched_start/end must be 0-1439"); return;
+        }
+        slotScheduleStartMin[3] = (uint16_t)s;
+        slotScheduleEndMin[3]   = (uint16_t)e;
+        changed = true;
+    }
+    if (doc["quotes_sched_days"].is<int>()) {
+        int d = doc["quotes_sched_days"].as<int>();
+        if (d < 0 || d > SLOT_SCHEDULE_DAYS_MAX) { _sendError(req, 400, "quotes_sched_days must be 0-127"); return; }
+        slotScheduleDaysMask[3] = (uint8_t)d;
         changed = true;
     }
 

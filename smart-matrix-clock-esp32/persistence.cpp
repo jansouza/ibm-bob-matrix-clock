@@ -90,6 +90,14 @@ void loadConfig() {
     cfgQuotesUpdateMs = _prefs.getUInt(NVS_KEY_QUOTES_UPMS, QUOTES_UPDATE_DEFAULT_MS);
     _prefs.getString(NVS_KEY_QUOTES_TICKERS, cfgQuotesTickers, QUOTES_TICKERS_MAX);
 
+    // ── Slot scheduling by time of day (Sub-Task 6e) ────────────────────────────
+    slotScheduleStartMin[2] = _prefs.getUShort(NVS_KEY_SLOT2_SCHED_START, 0);
+    slotScheduleEndMin[2]   = _prefs.getUShort(NVS_KEY_SLOT2_SCHED_END, 0);
+    slotScheduleDaysMask[2] = _prefs.getUChar(NVS_KEY_SLOT2_SCHED_DAYS, SLOT_SCHEDULE_ALL_DAYS);
+    slotScheduleStartMin[3] = _prefs.getUShort(NVS_KEY_SLOT3_SCHED_START, QUOTES_SCHED_START_DEFAULT_MIN);
+    slotScheduleEndMin[3]   = _prefs.getUShort(NVS_KEY_SLOT3_SCHED_END, QUOTES_SCHED_END_DEFAULT_MIN);
+    slotScheduleDaysMask[3] = _prefs.getUChar(NVS_KEY_SLOT3_SCHED_DAYS, QUOTES_SCHED_DAYS_DEFAULT);
+
     _close();
 }
 
@@ -131,6 +139,14 @@ void saveConfig() {
     _prefs.putBool(NVS_KEY_QUOTES_EN,   slotEnabled[3]);
     _prefs.putUInt(NVS_KEY_QUOTES_UPMS, cfgQuotesUpdateMs);
     _prefs.putString(NVS_KEY_QUOTES_TICKERS, cfgQuotesTickers);
+
+    // ── Slot scheduling by time of day (Sub-Task 6e) ────────────────────────────
+    _prefs.putUShort(NVS_KEY_SLOT2_SCHED_START, slotScheduleStartMin[2]);
+    _prefs.putUShort(NVS_KEY_SLOT2_SCHED_END,   slotScheduleEndMin[2]);
+    _prefs.putUChar(NVS_KEY_SLOT2_SCHED_DAYS,   slotScheduleDaysMask[2]);
+    _prefs.putUShort(NVS_KEY_SLOT3_SCHED_START, slotScheduleStartMin[3]);
+    _prefs.putUShort(NVS_KEY_SLOT3_SCHED_END,   slotScheduleEndMin[3]);
+    _prefs.putUChar(NVS_KEY_SLOT3_SCHED_DAYS,   slotScheduleDaysMask[3]);
 
     _close();
 }
@@ -192,4 +208,10 @@ void factoryReset() {
     for (uint8_t i = 0; i < QUOTES_MAX_TICKERS; i++) quoteCache[i] = { {0}, 0.0f, 0.0f, false };
     quoteCacheCount  = 0;
     quotesCacheStale = false;
+
+    // ── Slot scheduling by time of day (Sub-Task 6e) ────────────────────────────
+    slotScheduleStartMin[2] = 0; slotScheduleEndMin[2] = 0; slotScheduleDaysMask[2] = SLOT_SCHEDULE_ALL_DAYS;
+    slotScheduleStartMin[3] = QUOTES_SCHED_START_DEFAULT_MIN;
+    slotScheduleEndMin[3]   = QUOTES_SCHED_END_DEFAULT_MIN;
+    slotScheduleDaysMask[3] = QUOTES_SCHED_DAYS_DEFAULT;
 }

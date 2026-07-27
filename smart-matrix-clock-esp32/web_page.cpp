@@ -118,6 +118,16 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
 .lang-select{margin-left:auto;padding:4px 8px;border:1px solid #30363d;
   border-radius:4px;font-size:13px;background:#0d1117;color:#c9d1d9;
   cursor:pointer}
+/* Weekday picker (slot scheduling) */
+.day-picker{display:flex;gap:6px;flex-wrap:wrap}
+.day-toggle{position:relative;width:34px;height:34px}
+.day-toggle input{position:absolute;opacity:0;width:100%;height:100%;
+  margin:0;cursor:pointer}
+.day-toggle span{position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:center;border-radius:50%;background:#0d1117;
+  border:1px solid #30363d;color:#8b949e;font-size:11px;font-weight:600;
+  pointer-events:none}
+.day-toggle input:checked + span{background:#238636;border-color:#238636;color:#fff}
 </style>
 </head>
 <body>
@@ -340,6 +350,29 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
           <option value="F">Fahrenheit (&#176;F)</option>
         </select>
       </div>
+      <div class="row">
+        <div class="field">
+          <label data-i18n="common.scheduleStart">Show from</label>
+          <input id="cfg-weather-sched-start" type="time"/>
+        </div>
+        <div class="field">
+          <label data-i18n="common.scheduleEnd">Show until</label>
+          <input id="cfg-weather-sched-end" type="time"/>
+        </div>
+      </div>
+      <div class="hint" data-i18n="common.scheduleHint">Leave both empty to show at any time of day</div>
+      <div class="field" style="margin-top:10px">
+        <label data-i18n="common.scheduleDays">Days</label>
+        <div class="day-picker" id="cfg-weather-days">
+          <label class="day-toggle"><input type="checkbox" data-day="1" checked/><span data-i18n="common.day.mon">Mon</span></label>
+          <label class="day-toggle"><input type="checkbox" data-day="2" checked/><span data-i18n="common.day.tue">Tue</span></label>
+          <label class="day-toggle"><input type="checkbox" data-day="3" checked/><span data-i18n="common.day.wed">Wed</span></label>
+          <label class="day-toggle"><input type="checkbox" data-day="4" checked/><span data-i18n="common.day.thu">Thu</span></label>
+          <label class="day-toggle"><input type="checkbox" data-day="5" checked/><span data-i18n="common.day.fri">Fri</span></label>
+          <label class="day-toggle"><input type="checkbox" data-day="6" checked/><span data-i18n="common.day.sat">Sat</span></label>
+          <label class="day-toggle"><input type="checkbox" data-day="0" checked/><span data-i18n="common.day.sun">Sun</span></label>
+        </div>
+      </div>
     </div>
     <div class="actions">
       <button class="btn btn-secondary" id="btn-fetch-weather" data-i18n="weather.fetchNow">Refresh now</button>
@@ -379,6 +412,29 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
         <div class="field">
           <label data-i18n="common.displayInterval">Display time (seconds)</label>
           <input id="cfg-quotes-display" type="number" min="5" max="300"/>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label data-i18n="common.scheduleStart">Show from</label>
+          <input id="cfg-quotes-sched-start" type="time"/>
+        </div>
+        <div class="field">
+          <label data-i18n="common.scheduleEnd">Show until</label>
+          <input id="cfg-quotes-sched-end" type="time"/>
+        </div>
+      </div>
+      <div class="hint" data-i18n="common.scheduleHint">Leave both empty to show at any time of day</div>
+      <div class="field" style="margin-top:10px">
+        <label data-i18n="common.scheduleDays">Days</label>
+        <div class="day-picker" id="cfg-quotes-days">
+          <label class="day-toggle"><input type="checkbox" data-day="1" checked/><span data-i18n="common.day.mon">Mon</span></label>
+          <label class="day-toggle"><input type="checkbox" data-day="2" checked/><span data-i18n="common.day.tue">Tue</span></label>
+          <label class="day-toggle"><input type="checkbox" data-day="3" checked/><span data-i18n="common.day.wed">Wed</span></label>
+          <label class="day-toggle"><input type="checkbox" data-day="4" checked/><span data-i18n="common.day.thu">Thu</span></label>
+          <label class="day-toggle"><input type="checkbox" data-day="5" checked/><span data-i18n="common.day.fri">Fri</span></label>
+          <label class="day-toggle"><input type="checkbox" data-day="6"/><span data-i18n="common.day.sat">Sat</span></label>
+          <label class="day-toggle"><input type="checkbox" data-day="0"/><span data-i18n="common.day.sun">Sun</span></label>
         </div>
       </div>
     </div>
@@ -505,6 +561,13 @@ var I18N = {
     'common.settings': 'Settings',
     'common.updateInterval': 'Update interval (minutes)',
     'common.displayInterval': 'Display time (seconds)',
+    'common.scheduleStart': 'Show from',
+    'common.scheduleEnd': 'Show until',
+    'common.scheduleHint': 'Leave both empty to show at any time of day',
+    'common.scheduleDays': 'Days',
+    'common.day.mon': 'Mon', 'common.day.tue': 'Tue', 'common.day.wed': 'Wed',
+    'common.day.thu': 'Thu', 'common.day.fri': 'Fri', 'common.day.sat': 'Sat',
+    'common.day.sun': 'Sun',
     'common.saveSettings': 'Save settings',
     'status.ntpSynced': 'Synced', 'status.ntpWaiting': 'Waiting',
     'status.connected': 'Connected', 'status.noSync': 'No sync',
@@ -590,6 +653,13 @@ var I18N = {
     'common.settings': 'Configura&#231;&#245;es',
     'common.updateInterval': 'Intervalo de atualiza&#231;&#227;o (minutos)',
     'common.displayInterval': 'Tempo de exibi&#231;&#227;o (segundos)',
+    'common.scheduleStart': 'Exibir a partir de',
+    'common.scheduleEnd': 'Exibir at&#233;',
+    'common.scheduleHint': 'Deixe os dois campos vazios para exibir a qualquer hor&#225;rio',
+    'common.scheduleDays': 'Dias',
+    'common.day.mon': 'Seg', 'common.day.tue': 'Ter', 'common.day.wed': 'Qua',
+    'common.day.thu': 'Qui', 'common.day.fri': 'Sex', 'common.day.sat': 'S&#225;b',
+    'common.day.sun': 'Dom',
     'common.saveSettings': 'Salvar configura&#231;&#245;es',
     'status.ntpSynced': 'Sincronizado', 'status.ntpWaiting': 'Aguardando',
     'status.connected': 'Conectado', 'status.noSync': 'Sem sync',
@@ -661,6 +731,36 @@ function setVal(id, v) { document.getElementById(id).value = v; }
 function checked(id) { return document.getElementById(id).checked; }
 function setChecked(id, v) { document.getElementById(id).checked = !!v; }
 function setText(id, v) { document.getElementById(id).textContent = v; }
+
+// Slot scheduling: <input type="time"> gives/takes "HH:MM"; the API stores minutes-of-day.
+// Equal start/end means "no restriction" -> rendered as empty fields (see setScheduleFields).
+function minToTimeStr(min) {
+  var h = Math.floor(min / 60), m = min % 60;
+  return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+}
+function timeStrToMin(str) {
+  if (!str) return 0;
+  var parts = str.split(':');
+  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+}
+function setScheduleFields(startId, endId, startMin, endMin) {
+  if (startMin === endMin) { setVal(startId, ''); setVal(endId, ''); return; }
+  setVal(startId, minToTimeStr(startMin));
+  setVal(endId, minToTimeStr(endMin));
+}
+// Weekday mask: bit N = day N enabled, N following struct tm's tm_wday (0=Sunday..6=Saturday).
+function setDaysMask(containerId, mask) {
+  document.querySelectorAll('#' + containerId + ' input').forEach(function(cb) {
+    cb.checked = !!(mask & (1 << parseInt(cb.dataset.day, 10)));
+  });
+}
+function getDaysMask(containerId) {
+  var mask = 0;
+  document.querySelectorAll('#' + containerId + ' input').forEach(function(cb) {
+    if (cb.checked) mask |= (1 << parseInt(cb.dataset.day, 10));
+  });
+  return mask;
+}
 
 // ── Range sliders live update ────────────────────────────────────────────────
 document.getElementById('cfg-brightness').addEventListener('input', function() {
@@ -744,11 +844,18 @@ function loadConfig() {
     setVal('cfg-weather-update', Math.round((c.weather_update_ms || 600000) / 60000));
     setVal('cfg-weather-display', Math.round((c.weather_display_ms || 30000) / 1000));
     setVal('cfg-temp-unit', c.temp_unit || 'C');
+    setScheduleFields('cfg-weather-sched-start', 'cfg-weather-sched-end',
+      c.weather_sched_start || 0, c.weather_sched_end || 0);
+    setDaysMask('cfg-weather-days', c.weather_sched_days !== undefined ? c.weather_sched_days : 0x7F);
 
     setChecked('cfg-quotes-en', c.quotes_enabled);
     setVal('cfg-quotes-tickers', c.quotes_tickers || '');
     setVal('cfg-quotes-update', Math.round((c.quotes_update_ms || 600000) / 60000));
     setVal('cfg-quotes-display', Math.round((c.quotes_display_ms || 30000) / 1000));
+    setScheduleFields('cfg-quotes-sched-start', 'cfg-quotes-sched-end',
+      c.quotes_sched_start !== undefined ? c.quotes_sched_start : 480,
+      c.quotes_sched_end !== undefined ? c.quotes_sched_end : 1080);
+    setDaysMask('cfg-quotes-days', c.quotes_sched_days !== undefined ? c.quotes_sched_days : 0x3E);
   });
 }
 
@@ -1080,13 +1187,17 @@ document.getElementById('cfg-city-search').addEventListener('keydown', function(
 
 // ── Save weather config ──────────────────────────────────────────────────────
 document.getElementById('btn-save-weather').addEventListener('click', function() {
+  var schedStart = val('cfg-weather-sched-start'), schedEnd = val('cfg-weather-sched-end');
   var body = {
     weather_enabled: checked('cfg-weather-en'),
     weather_lat: parseFloat(val('cfg-weather-lat')) || 0,
     weather_lon: parseFloat(val('cfg-weather-lon')) || 0,
     weather_update_ms: parseInt(val('cfg-weather-update'), 10) * 60000,
     weather_display_ms: parseInt(val('cfg-weather-display'), 10) * 1000,
-    temp_unit: val('cfg-temp-unit')
+    temp_unit: val('cfg-temp-unit'),
+    weather_sched_start: (schedStart && schedEnd) ? timeStrToMin(schedStart) : 0,
+    weather_sched_end:   (schedStart && schedEnd) ? timeStrToMin(schedEnd) : 0,
+    weather_sched_days:  getDaysMask('cfg-weather-days')
   };
   fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {
@@ -1122,11 +1233,15 @@ document.getElementById('btn-fetch-quotes').addEventListener('click', function()
 
 // ── Save quotes config ───────────────────────────────────────────────────────
 document.getElementById('btn-save-quotes').addEventListener('click', function() {
+  var schedStart = val('cfg-quotes-sched-start'), schedEnd = val('cfg-quotes-sched-end');
   var body = {
     quotes_enabled: checked('cfg-quotes-en'),
     quotes_tickers: val('cfg-quotes-tickers'),
     quotes_update_ms: parseInt(val('cfg-quotes-update'), 10) * 60000,
-    quotes_display_ms: parseInt(val('cfg-quotes-display'), 10) * 1000
+    quotes_display_ms: parseInt(val('cfg-quotes-display'), 10) * 1000,
+    quotes_sched_start: (schedStart && schedEnd) ? timeStrToMin(schedStart) : 0,
+    quotes_sched_end:   (schedStart && schedEnd) ? timeStrToMin(schedEnd) : 0,
+    quotes_sched_days:  getDaysMask('cfg-quotes-days')
   };
   fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {

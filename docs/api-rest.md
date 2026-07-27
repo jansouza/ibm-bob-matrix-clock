@@ -93,10 +93,16 @@ Returns the full persisted configuration.
   "weather_lat":        0.0,
   "weather_lon":        0.0,
   "temp_unit":          "C",
+  "weather_sched_start": 0,
+  "weather_sched_end":   0,
+  "weather_sched_days":  127,
   "quotes_enabled":     false,
   "quotes_update_ms":   30000,
   "quotes_display_ms":  30000,
-  "quotes_tickers":     ""
+  "quotes_tickers":     "",
+  "quotes_sched_start": 480,
+  "quotes_sched_end":   1080,
+  "quotes_sched_days":  62
 }
 ```
 
@@ -137,8 +143,14 @@ Updates one or more configuration fields. Only fields present in the body are pr
 | `weather_lat` | float | -90–90 | Latitude used for weather lookups |
 | `weather_lon` | float | -180–180 | Longitude used for weather lookups |
 | `temp_unit` | string | `"C"` or `"F"` | Temperature unit for the weather slot |
+| `weather_sched_start` | int | 0–1439 | Weather daily window start, minutes-of-day. Must be sent together with `weather_sched_end`. Equal start/end means "always" (no time restriction) |
+| `weather_sched_end` | int | 0–1439 | Weather daily window end, minutes-of-day. `start > end` wraps past midnight (e.g. `1320`/`360` = 22:00–06:00) |
+| `weather_sched_days` | int | 0–127 | Weekday bitmask for the weather slot. Bit N = weekday N enabled, following `struct tm`'s `tm_wday` (bit 0 = Sunday … bit 6 = Saturday). `127` = every day (default) |
 | `quotes_enabled` | bool | — | Enable/disable the quotes slot (slot 3) |
 | `quotes_display_ms` | int | 5000–300000 | Quotes slot display duration (ms) |
+| `quotes_sched_start` | int | 0–1439 | Quotes daily window start, minutes-of-day. Must be sent together with `quotes_sched_end`. Equal start/end means "always" (no time restriction). Default: `480` (08:00) |
+| `quotes_sched_end` | int | 0–1439 | Quotes daily window end, minutes-of-day. `start > end` wraps past midnight. Default: `1080` (18:00) |
+| `quotes_sched_days` | int | 0–127 | Weekday bitmask for the quotes slot. Bit N = weekday N enabled, following `struct tm`'s `tm_wday` (bit 0 = Sunday … bit 6 = Saturday). Default: `62` (Mon-Fri) |
 
 > **Note:** the web panel's "Search city or postal code" field (Weather tab) is a browser-side convenience only — it queries the public Open-Meteo Geocoding API (`https://geocoding-api.open-meteo.com/v1/search`) directly from JavaScript to resolve a place name to coordinates, then fills `weather_lat`/`weather_lon` before the normal `POST /api/config` save. It is not a firmware endpoint and adds no new route.
 
@@ -180,6 +192,10 @@ curl -X POST http://192.168.1.42/api/config \
 | 400 | `"date_interval_ms out of range"` | Value outside 5000–300000 ms |
 | 400 | `"weather_display_ms out of range"` | Value outside 5000–300000 ms |
 | 400 | `"quotes_display_ms out of range"` | Value outside 5000–300000 ms |
+| 400 | `"weather_sched_start/end must be 0-1439"` | Value outside 0–1439 minutes |
+| 400 | `"quotes_sched_start/end must be 0-1439"` | Value outside 0–1439 minutes |
+| 400 | `"weather_sched_days must be 0-127"` | Bitmask outside 0–127 |
+| 400 | `"quotes_sched_days must be 0-127"` | Bitmask outside 0–127 |
 
 ---
 

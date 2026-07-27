@@ -59,6 +59,9 @@ extern uint8_t  messageHistoryHead;   // index of the oldest entry (ring buffer 
 extern uint8_t  activeSlot;           // index of the currently active slot
 extern bool     slotEnabled[];        // whether each slot is enabled
 extern uint32_t slotIntervalMs[];     // how long each slot is displayed (ms)
+extern uint16_t slotScheduleStartMin[]; // daily window start, minutes-of-day (0-1439); only used by slots 2/3
+extern uint16_t slotScheduleEndMin[];   // daily window end, minutes-of-day (0-1439); start == end means "always"
+extern uint8_t  slotScheduleDaysMask[]; // bit N = weekday N enabled (tm_wday: 0=Sunday..6=Saturday); only used by slots 2/3
 
 // ─── Persistent configuration (loaded at boot, saved on change) ───────────────
 extern char     cfgTimezone[];        // IANA timezone name (e.g. "America/Sao_Paulo")

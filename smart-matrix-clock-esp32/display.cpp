@@ -359,6 +359,27 @@ static bool _startSlotScroll(uint8_t slot) {
     return false;
 }
 
+// Whether the given slot is within its configured daily time window and
+// allowed on the current weekday.
+// slotScheduleStartMin[slot] == slotScheduleEndMin[slot] means "no time restriction".
+// start > end wraps past midnight (e.g. 22:00-06:00 covers the overnight window).
+// slotScheduleDaysMask[slot] bit N (tm_wday: 0=Sunday..6=Saturday) gates the weekday.
+static bool _slotInSchedule(uint8_t slot) {
+    time_t now = time(nullptr);
+    struct tm t;
+    localtime_r(&now, &t);
+
+    if (!(slotScheduleDaysMask[slot] & (1 << t.tm_wday))) return false;
+
+    uint16_t start = slotScheduleStartMin[slot];
+    uint16_t end   = slotScheduleEndMin[slot];
+    if (start == end) return true;
+
+    uint16_t nowMin = (uint16_t)(t.tm_hour * 60 + t.tm_min);
+    if (start < end) return nowMin >= start && nowMin < end;
+    return nowMin >= start || nowMin < end;   // wraps past midnight
+}
+
 // Check slot rotation timer and trigger next slot when due.
 // Must be called from displayTick() only when the display is idle (not
 // scrolling, not messaging, not showing date).
@@ -386,9 +407,9 @@ static void _slotRotationTick() {
     // Each slot tracks its own "due" time independently so one slot's shorter
     // interval can never starve the other — whichever eligible slot has been
     // waiting longest past its own interval goes next.
-    bool slot2Due = slotEnabled[2] && weatherCache.valid &&
+    bool slot2Due = slotEnabled[2] && weatherCache.valid && _slotInSchedule(2) &&
                     (now - _slotLastShownMs[2] >= slotIntervalMs[2]);
-    bool slot3Due = slotEnabled[3] && quoteCacheCount > 0 &&
+    bool slot3Due = slotEnabled[3] && quoteCacheCount > 0 && _slotInSchedule(3) &&
                     (now - _slotLastShownMs[3] >= slotIntervalMs[3]);
 
     if (slot2Due && slot3Due) {

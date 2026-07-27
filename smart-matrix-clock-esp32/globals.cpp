@@ -33,6 +33,12 @@ uint8_t  messageHistoryHead  = 0;
 uint8_t  activeSlot        = 0;
 bool     slotEnabled[4]    = { true, false, false, false };   // [clock, message, weather, quotes]
 uint32_t slotIntervalMs[4] = { 0, 0, 60000, 120000 };         // clock = base (no interval)
+// Quotes (slot 3) defaults to business hours, Mon-Fri — markets are closed
+// nights/weekends. Weather (slot 2) defaults to "always" (start == end).
+uint16_t slotScheduleStartMin[4] = { 0, 0, 0, QUOTES_SCHED_START_DEFAULT_MIN };
+uint16_t slotScheduleEndMin[4]   = { 0, 0, 0, QUOTES_SCHED_END_DEFAULT_MIN };
+uint8_t  slotScheduleDaysMask[4] = { SLOT_SCHEDULE_ALL_DAYS, SLOT_SCHEDULE_ALL_DAYS,
+                                      SLOT_SCHEDULE_ALL_DAYS, QUOTES_SCHED_DAYS_DEFAULT };
 
 // ─── Persistent configuration ─────────────────────────────────────────────────
 char     cfgTimezone[NTP_TIMEZONE_MAX]  = NTP_TIMEZONE_DEFAULT;

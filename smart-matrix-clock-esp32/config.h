@@ -141,7 +141,34 @@
 #define QUOTES_SYMBOL_MAX        12   // max chars per symbol (incl. null)
 #define QUOTES_TICKERS_MAX       120  // max length of the comma-separated tickers string (incl. null)
 
+// Default schedule: business hours, Monday-Friday (markets are closed nights/weekends).
+// Minutes-of-day; see "Slot scheduling by time of day" below for the encoding.
+#define QUOTES_SCHED_START_DEFAULT_MIN  480    // 08:00
+#define QUOTES_SCHED_END_DEFAULT_MIN   1080    // 18:00
+#define QUOTES_SCHED_DAYS_DEFAULT  ((1<<1)|(1<<2)|(1<<3)|(1<<4)|(1<<5))  // Mon-Fri
+
 // NVS keys — quotes
 #define NVS_KEY_QUOTES_EN      "quotes_en"
 #define NVS_KEY_QUOTES_UPMS    "quotes_upms"
 #define NVS_KEY_QUOTES_TICKERS "quotes_tick"
+
+// ─── Slot scheduling by time of day (Sub-Task 6e) ─────────────────────────────
+// Each rotating slot (weather = 2, quotes = 3) may be restricted to a daily
+// time window, expressed as minutes-of-day (0-1439). start == end means "no
+// restriction" (slot follows only its enabled flag, as before). start > end
+// wraps past midnight (e.g. 22:00-06:00 covers the overnight window).
+#define SLOT_SCHEDULE_MIN_MINUTE   0
+#define SLOT_SCHEDULE_MAX_MINUTE   1439
+
+// Weekday mask: bit N set = day N enabled, where N follows struct tm's
+// tm_wday convention (0 = Sunday .. 6 = Saturday). All-bits-set = every day.
+#define SLOT_SCHEDULE_ALL_DAYS     0x7F
+#define SLOT_SCHEDULE_DAYS_MAX     0x7F   // mask upper bound (7 bits)
+
+// NVS keys — slot schedule
+#define NVS_KEY_SLOT2_SCHED_START "s2_sch_st"
+#define NVS_KEY_SLOT2_SCHED_END   "s2_sch_en"
+#define NVS_KEY_SLOT2_SCHED_DAYS  "s2_sch_dy"
+#define NVS_KEY_SLOT3_SCHED_START "s3_sch_st"
+#define NVS_KEY_SLOT3_SCHED_END   "s3_sch_en"
+#define NVS_KEY_SLOT3_SCHED_DAYS  "s3_sch_dy"

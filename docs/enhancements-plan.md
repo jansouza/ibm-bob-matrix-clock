@@ -20,6 +20,7 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 | Sub-Task 4 | Web interface language (EN/PT, persisted on device) |
 | Sub-Task 6a | Live message preview (icon tags resolved in browser before sending) |
 | Sub-Task 6d | Message history (`GET /api/messages/history`, last 20 messages) |
+| Sub-Task 6e | Slot scheduling by time of day (per-slot daily window on weather/quotes) |
 
 ### Pending
 
@@ -30,7 +31,6 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 | Sub-Task 5 | WiFi network scan (`GET /api/wifi/scan`) | 🟢 Low |
 | Sub-Task 6b | Automatic brightness by time of day | 🟡 Medium |
 | Sub-Task 6c | OTA firmware update (`POST /api/ota`) | 🟡 Medium |
-| Sub-Task 6e | Slot scheduling by time of day | 🟡 Medium |
 | Sub-Task 6f | Soft reboot via panel (`POST /api/restart`) | 🟡 Medium |
 
 ---
@@ -270,7 +270,7 @@ Incorporate the following improvements into the product roadmap, all compatible 
 | 6b | **Automatic brightness by time of day** | Automatically reduce brightness at night (e.g.: 23h–7h) to avoid disturbance. Configurable: start/end time and night brightness level |
 | 6c | **OTA (Over-The-Air) firmware update** | `POST /api/ota` endpoint accepts a `.bin` file, writes via ESP32 `Update.h`. Reduces the need for a USB cable for updates |
 | 6d `[x] done` | **Message history** | Maintain a ring buffer of the last N received messages (timestamp + text). Exposed via `GET /api/messages/history`. Useful for debugging and auditing |
-| 6e | **Slot scheduling by time of day** | Configure time windows in which a slot is displayed (e.g.: quotes only 9h–18h on weekdays). Requires only one extra field per slot and a check in `slotRotationTick()` |
+| 6e `[x] done` | **Slot scheduling by time of day** | Configure time windows in which a slot is displayed (e.g.: quotes only 9h–18h on weekdays). Requires only one extra field per slot and a check in `slotRotationTick()` |
 | 6f | **Soft reboot via panel** | "Restart device" button in the Network/API tab that calls `POST /api/restart`; triggers `scheduleRestart(1500)`. Useful after complex configuration changes |
 
 ### Todo List
