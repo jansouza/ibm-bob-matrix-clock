@@ -19,7 +19,7 @@ arduino-cli compile --fqbn esp32:esp32:esp32 smart-matrix-clock-esp32
 - **No display or network I/O inside HTTP handlers** — handlers only validate input and write state variables.
 - **No `HTTPClient` inside HTTP handlers** — only call it from `fetcherTick()` in `loop()`.
 - **Use `http.getString()`, not `http.getStream()`** — chunked/compressed ESP32 responses are unreliable with `getStream()`, producing spurious `InvalidInput` JSON parse errors on valid payloads.
-- **Always convert UTF-8 → Latin-1** before passing strings to `MD_Parola`/`MD_MAX72XX`, then call `expandIconTags()` after — order matters. `alertMessage[]` is stored Latin-1.
+- **Always convert UTF-8 → Latin-1** before passing strings to `MD_Parola`/`MD_MAX72XX`, then call `expandIconTags()` after — order matters. `messageText[]` is stored Latin-1.
 - **Always use `ArduinoJson`** for building or parsing JSON — never string concatenation.
 - **`applyTimezone()` must run after `ntpBegin()`** in `setup()` — and again in `ntpTick()` after each periodic re-sync — because `configTime()` resets TZ to UTC internally every call.
 
@@ -44,7 +44,7 @@ No other branching logic is needed.
 - Module-private state variables: `static` in `.cpp`, prefixed with `_` (e.g., `_lastBlink`, `_colonVisible`).
 - Public API functions: `camelCase` with module prefix (e.g., `displayTick()`, `ntpBegin()`, `wifiConnect()`).
 - Constants in `config.h`: `SCREAMING_SNAKE_CASE`.
-- `extern` globals in `globals.h`: no prefix, plain `camelCase` (e.g., `ntpSynced`, `alertPending`).
+- `extern` globals in `globals.h`: no prefix, plain `camelCase` (e.g., `ntpSynced`, `messagePending`).
 
 ## Include Order (per file)
 

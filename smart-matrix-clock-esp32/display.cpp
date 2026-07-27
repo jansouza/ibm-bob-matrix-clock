@@ -44,22 +44,22 @@ static char     _apMsgBuf[48]    = "";      // "Config 192.168.4.1"
 // Date display timer
 static uint32_t _lastDateShow    = 0;   // millis() when date was last triggered
 
-// ── Static/blink alert state ──────────────────────────────────────────────────
-static bool     _alertActive      = false;  // true while a static/blink alert is running
-static uint32_t _alertStartMs     = 0;      // when the static/blink alert began
-static uint32_t _alertBlinkLast   = 0;      // last blink toggle timestamp
-static bool     _alertBlinkOn     = true;   // blink on/off state
-static uint32_t _alertPhase1Ms    = 0;      // duration of the current alert's blink/static phase (ms)
+// ── Static/blink message state ──────────────────────────────────────────────────
+static bool     _messageActive      = false;  // true while a static/blink message is running
+static uint32_t _messageStartMs     = 0;      // when the static/blink message began
+static uint32_t _messageBlinkLast   = 0;      // last blink toggle timestamp
+static bool     _messageBlinkOn     = true;   // blink on/off state
+static uint32_t _messagePhase1Ms    = 0;      // duration of the current message's blink/static phase (ms)
 
 // ── Blink+Scroll state ────────────────────────────────────────────────────────
-// Phase 1: blink the first screen of text for ALERT_BLINK_SCROLL_PHASE1_MS
+// Phase 1: blink the first screen of text for MESSAGE_BLINK_SCROLL_PHASE1_MS
 //          (capped to whatever remains of the cycle's total duration).
-// Phase 2: scroll the remainder of alertMessage.
-// The whole blink→scroll cycle then repeats from phase 1 until alertDurationMs
-// (tracked from _alertCycleStartMs, not from each phase's own start) elapses.
+// Phase 2: scroll the remainder of messageText.
+// The whole blink→scroll cycle then repeats from phase 1 until messageDurationMs
+// (tracked from _messageCycleStartMs, not from each phase's own start) elapses.
 static bool     _blinkScrollPhase2  = false;  // true once we transition from blink to scroll
 static bool     _blinkScrollCycling = false;  // true while a repeating BLINK_SCROLL cycle is active
-static uint32_t _alertCycleStartMs  = 0;      // millis() when the overall BLINK_SCROLL cycle began
+static uint32_t _messageCycleStartMs  = 0;      // millis() when the overall BLINK_SCROLL cycle began
 
 // ── Fixed date display state ──────────────────────────────────────────────────
 // Shows "DAY DDMM" (or "DAY MMDD") all at once using the small 3×5 font.
@@ -71,15 +71,15 @@ static uint32_t _dateMsStart      = 0;
 static char     _dateLine[12]     = "";  // e.g. "SEG 1407" or "MON 0714"
 
 // ── Slot rotation state ───────────────────────────────────────────────────────
-static uint32_t _slotStartMs      = 0;   // when the current non-clock slot began
 static bool     _slotActive       = false; // true while a non-clock slot is running
 static int8_t   _forceSlotIndex   = -1;   // set by displayForceSlot(); consumed by displayTick()
+static uint32_t _slotLastShownMs[4] = {0, 0, 0, 0}; // per-slot: millis() when it last finished showing
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-// Resolve language index from cfgLanguage string.
+// Resolve language index from cfgLocale string.
 static uint8_t _langIndex() {
-    return (cfgLanguage[0] == 'p' || cfgLanguage[0] == 'P') ? LANG_PT : LANG_EN;
+    return (cfgLocale[0] == 'p' || cfgLocale[0] == 'P') ? LANG_PT : LANG_EN;
 }
 
 // Start a non-blocking scroll of the given Latin-1 string at the given speed.
@@ -99,18 +99,18 @@ static void _startScrollAt(const char* latin1Text, uint16_t speed, uint32_t dura
 
 // Start a non-blocking scroll at the configured scrollSpeed.
 static void _startScroll(const char* latin1Text, uint32_t durationMs = 0) {
-    uint16_t speed = (alertScrollSpeedMs >= 0) ? (uint16_t)alertScrollSpeedMs : scrollSpeed;
+    uint16_t speed = (messageScrollSpeedMs >= 0) ? (uint16_t)messageScrollSpeedMs : scrollSpeed;
     _startScrollAt(latin1Text, speed, durationMs);
 }
 
-// Apply the alert's brightness override (if any) on top of currentBrightness.
-static void _applyAlertBrightness() {
-    if (alertBrightness >= 0) _display.setIntensity((uint8_t)alertBrightness);
+// Apply the message's brightness override (if any) on top of currentBrightness.
+static void _applyMessageBrightness() {
+    if (messageBrightness >= 0) _display.setIntensity((uint8_t)messageBrightness);
 }
 
-// Restore the globally configured brightness after an alert ends.
+// Restore the globally configured brightness after a message ends.
 static void _restoreBrightness() {
-    if (alertBrightness >= 0) _display.setIntensity(currentBrightness);
+    if (messageBrightness >= 0) _display.setIntensity(currentBrightness);
 }
 
 // Number of columns that fit on the physical display (8 columns per module).
@@ -142,32 +142,32 @@ static void _printCentered(const char* text) {
     _lastTimeStr[0] = '\0';
 }
 
-// Begin a static or blink alert.
+// Begin a static or blink message.
 // isCycleStart: true when this call begins a brand-new BLINK_SCROLL cycle
 // (as opposed to re-entering phase 1 after phase 2's scroll finished).
-static void _startTimedAlert(bool isCycleStart = true) {
-    _alertActive       = true;
-    _alertStartMs      = millis();
-    _alertBlinkLast    = millis();
-    _alertBlinkOn      = true;
+static void _startTimedMessage(bool isCycleStart = true) {
+    _messageActive       = true;
+    _messageStartMs      = millis();
+    _messageBlinkLast    = millis();
+    _messageBlinkOn      = true;
     _blinkScrollPhase2 = false;
 
-    if (alertMode == ALERT_MODE_BLINK_SCROLL) {
-        if (isCycleStart) _alertCycleStartMs = _alertStartMs;
+    if (messageMode == MESSAGE_MODE_BLINK_SCROLL) {
+        if (isCycleStart) _messageCycleStartMs = _messageStartMs;
         _blinkScrollCycling = true;
         // Phase 1 gets a fixed slice, capped to whatever remains of the
-        // overall cycle budget (alertDurationMs, measured from cycle start).
-        uint32_t cycleElapsed = _alertStartMs - _alertCycleStartMs;
-        uint32_t cycleRemaining = (alertDurationMs > cycleElapsed) ? (alertDurationMs - cycleElapsed) : 0;
-        _alertPhase1Ms = (cycleRemaining < ALERT_BLINK_SCROLL_PHASE1_MS)
-                             ? cycleRemaining : ALERT_BLINK_SCROLL_PHASE1_MS;
+        // overall cycle budget (messageDurationMs, measured from cycle start).
+        uint32_t cycleElapsed = _messageStartMs - _messageCycleStartMs;
+        uint32_t cycleRemaining = (messageDurationMs > cycleElapsed) ? (messageDurationMs - cycleElapsed) : 0;
+        _messagePhase1Ms = (cycleRemaining < MESSAGE_BLINK_SCROLL_PHASE1_MS)
+                             ? cycleRemaining : MESSAGE_BLINK_SCROLL_PHASE1_MS;
     } else {
         _blinkScrollCycling = false;
-        _alertPhase1Ms = alertDurationMs;
+        _messagePhase1Ms = messageDurationMs;
     }
 
-    _applyAlertBrightness();
-    _printCentered(alertMessage);
+    _applyMessageBrightness();
+    _printCentered(messageText);
 }
 
 // Show date in small font: "DAY DD MM" or "DAY MM DD" — printed with Parola
@@ -266,7 +266,12 @@ static void _startDateDisplay() {
     // row 0 above them only.
     // For FC16_HW, raw indices are reversed: the day name (visual left) sits at
     // the HIGHEST raw column indices (rightEdge downward), not at leftEdge.
-    uint16_t dayWidth    = _display.getTextColumns(day);
+    // getTextColumns(day) alone omits the trailing inter-character spacing
+    // that IS present when "day" is immediately followed by the separating
+    // space in _dateLine — without adding it back, dayWidth undercounts by
+    // 1px and the day name's leading column (e.g. the left edge of "S" in
+    // "SEX") falls outside the shift loop below, leaving it unshifted.
+    uint16_t dayWidth    = _display.getTextColumns(day) + _display.getCharSpacing();
     uint16_t dayRawRight = rightEdge;
     uint16_t dayRawLeft  = (dayWidth <= rightEdge + 1)
                                ? (rightEdge - dayWidth + 1) : 0;
@@ -317,11 +322,13 @@ static bool _buildQuotesString(char* dst, size_t dstLen) {
 
     for (uint8_t i = 0; i < quoteCacheCount; i++) {
         if (!quoteCache[i].valid) continue;
-        char entry[48];
-        snprintf(entry, sizeof(entry), "%s%s: %.2f %c%.2f%%",
+        char priceStr[24];
+        formatQuotePrice(quoteCache[i].price, cfgLocale, priceStr, sizeof(priceStr));
+        char entry[56];
+        snprintf(entry, sizeof(entry), "%s%s: %s %c%.2f%%",
                  (i > 0) ? "  " : "",
                  quoteCache[i].symbol,
-                 quoteCache[i].price,
+                 priceStr,
                  (quoteCache[i].changePercent >= 0) ? '+' : '-',
                  fabsf(quoteCache[i].changePercent));
         strncat(dst, entry, dstLen - strlen(dst) - 1);
@@ -335,7 +342,6 @@ static bool _startSlotScroll(uint8_t slot) {
     if (slot == 2) {
         char buf[SCROLL_BUF_LEN];
         if (_buildWeatherString(buf, sizeof(buf))) {
-            _slotStartMs = millis();
             _slotActive  = true;
             activeSlot   = 2;
             _startScrollAt(buf, scrollSpeed);
@@ -344,7 +350,6 @@ static bool _startSlotScroll(uint8_t slot) {
     } else if (slot == 3) {
         char buf[SCROLL_BUF_LEN];
         if (_buildQuotesString(buf, sizeof(buf))) {
-            _slotStartMs = millis();
             _slotActive  = true;
             activeSlot   = 3;
             _startScrollAt(buf, scrollSpeed);
@@ -356,17 +361,16 @@ static bool _startSlotScroll(uint8_t slot) {
 
 // Check slot rotation timer and trigger next slot when due.
 // Must be called from displayTick() only when the display is idle (not
-// scrolling, not alerting, not showing date).
+// scrolling, not messaging, not showing date).
 static void _slotRotationTick() {
     uint32_t now = millis();
 
     // If a slot scroll was active and has now finished, clear the active flag.
     if (_slotActive) {
         if (_scrolling) return;   // still scrolling — nothing to do yet
+        _slotLastShownMs[activeSlot] = now;
         _slotActive = false;
         activeSlot  = 0;          // return to clock
-        // Reset timer from when this slot ended, not when it started.
-        _slotStartMs = now;
         return;   // give clock one tick to redraw before next check
     }
 
@@ -379,16 +383,23 @@ static void _slotRotationTick() {
     }
 
     // Timer-driven rotation: slot 2 = Weather, slot 3 = Quotes.
-    if (slotEnabled[2] && weatherCache.valid) {
-        if (now - _slotStartMs >= slotIntervalMs[2]) {
-            _startSlotScroll(2);
-            return;
-        }
-    }
-    if (slotEnabled[3] && quoteCacheCount > 0) {
-        if (now - _slotStartMs >= slotIntervalMs[3]) {
-            _startSlotScroll(3);
-        }
+    // Each slot tracks its own "due" time independently so one slot's shorter
+    // interval can never starve the other — whichever eligible slot has been
+    // waiting longest past its own interval goes next.
+    bool slot2Due = slotEnabled[2] && weatherCache.valid &&
+                    (now - _slotLastShownMs[2] >= slotIntervalMs[2]);
+    bool slot3Due = slotEnabled[3] && quoteCacheCount > 0 &&
+                    (now - _slotLastShownMs[3] >= slotIntervalMs[3]);
+
+    if (slot2Due && slot3Due) {
+        // Both due — show whichever has been waiting longest (relative to its own interval).
+        uint32_t overdue2 = (now - _slotLastShownMs[2]) - slotIntervalMs[2];
+        uint32_t overdue3 = (now - _slotLastShownMs[3]) - slotIntervalMs[3];
+        _startSlotScroll(overdue3 > overdue2 ? 3 : 2);
+    } else if (slot2Due) {
+        _startSlotScroll(2);
+    } else if (slot3Due) {
+        _startSlotScroll(3);
     }
 }
 
@@ -401,7 +412,8 @@ void displayBegin() {
     _display.setTextAlignment(PA_CENTER);
     _display.print("--:--");
     _lastDateShow = millis();   // don't show date immediately on boot
-    _slotStartMs  = millis();   // don't show weather slot immediately on boot
+    _slotLastShownMs[2] = millis();   // don't show weather slot immediately on boot
+    _slotLastShownMs[3] = millis();   // don't show quotes slot immediately on boot
 }
 
 void displayTick() {
@@ -427,17 +439,17 @@ void displayTick() {
             // BLINK_SCROLL: if the overall cycle still has time left, go back
             // to phase 1 (blink) instead of returning to the clock.
             if (_blinkScrollCycling) {
-                uint32_t cycleElapsed = now - _alertCycleStartMs;
-                if (cycleElapsed < alertDurationMs) {
-                    _startTimedAlert(false);
+                uint32_t cycleElapsed = now - _messageCycleStartMs;
+                if (cycleElapsed < messageDurationMs) {
+                    _startTimedMessage(false);
                     return;
                 }
                 _blinkScrollCycling = false;
             }
 
             _restoreBrightness();
-            alertBrightness    = -1;
-            alertScrollSpeedMs = -1;
+            messageBrightness    = -1;
+            messageScrollSpeedMs = -1;
 
             // In AP mode, immediately re-scroll the config message
             if (isApMode() && _apMsgBuf[0] != '\0') {
@@ -449,52 +461,52 @@ void displayTick() {
         }
     }
 
-    // ── Static / blink alert ──────────────────────────────────────────────────
-    if (_alertActive) {
-        uint32_t elapsed = now - _alertStartMs;
-        if (elapsed >= _alertPhase1Ms) {
+    // ── Static / blink message ──────────────────────────────────────────────────
+    if (_messageActive) {
+        uint32_t elapsed = now - _messageStartMs;
+        if (elapsed >= _messagePhase1Ms) {
             // Blink phase done — if BLINK_SCROLL, transition to scroll phase.
             // Only scroll the part of the message that wasn't already shown
             // (blinking) during phase 1.
-            if (alertMode == ALERT_MODE_BLINK_SCROLL && !_blinkScrollPhase2) {
+            if (messageMode == MESSAGE_MODE_BLINK_SCROLL && !_blinkScrollPhase2) {
                 _blinkScrollPhase2 = true;
-                size_t shown = _charsFittingOnScreen(alertMessage);
-                if (alertMessage[shown] != '\0') {
-                    _alertActive = false;
+                size_t shown = _charsFittingOnScreen(messageText);
+                if (messageText[shown] != '\0') {
+                    _messageActive = false;
                     // Remainder of the overall cycle budget goes to phase 2.
-                    uint32_t cycleElapsed = now - _alertCycleStartMs;
-                    uint32_t remaining = (alertDurationMs > cycleElapsed) ? (alertDurationMs - cycleElapsed) : 0;
-                    _startScroll(alertMessage + shown, remaining);
+                    uint32_t cycleElapsed = now - _messageCycleStartMs;
+                    uint32_t remaining = (messageDurationMs > cycleElapsed) ? (messageDurationMs - cycleElapsed) : 0;
+                    _startScroll(messageText + shown, remaining);
                     return;
                 }
                 // Whole message already fits on screen — nothing to scroll.
                 // If the cycle still has time left, just restart phase 1 (re-blink)
-                // instead of ending the alert early.
-                uint32_t cycleElapsed = now - _alertCycleStartMs;
-                if (cycleElapsed < alertDurationMs) {
-                    _startTimedAlert(false);
+                // instead of ending the message early.
+                uint32_t cycleElapsed = now - _messageCycleStartMs;
+                if (cycleElapsed < messageDurationMs) {
+                    _startTimedMessage(false);
                     return;
                 }
                 _blinkScrollCycling = false;
             }
-            // Alert duration expired — return to clock
-            _alertActive = false;
+            // Message duration expired — return to clock
+            _messageActive = false;
             _display.displayClear();
             _display.setTextAlignment(PA_CENTER);
             _restoreBrightness();
-            alertBrightness    = -1;
-            alertScrollSpeedMs = -1;
+            messageBrightness    = -1;
+            messageScrollSpeedMs = -1;
             _lastTimeStr[0] = '\0';
-        } else if (alertMode == ALERT_MODE_BLINK || alertMode == ALERT_MODE_BLINK_SCROLL) {
-            if (now - _alertBlinkLast >= ALERT_BLINK_PERIOD_MS) {
-                _alertBlinkLast = now;
-                _alertBlinkOn   = !_alertBlinkOn;
+        } else if (messageMode == MESSAGE_MODE_BLINK || messageMode == MESSAGE_MODE_BLINK_SCROLL) {
+            if (now - _messageBlinkLast >= MESSAGE_BLINK_PERIOD_MS) {
+                _messageBlinkLast = now;
+                _messageBlinkOn   = !_messageBlinkOn;
                 _display.displayClear();
                 _display.setTextAlignment(PA_CENTER);
-                if (_alertBlinkOn) _display.print(alertMessage);
+                if (_messageBlinkOn) _display.print(messageText);
             }
         }
-        // ALERT_MODE_STATIC: just leave the text on screen until duration expires
+        // MESSAGE_MODE_STATIC: just leave the text on screen until duration expires
         return;
     }
 
@@ -511,16 +523,16 @@ void displayTick() {
         return;   // don't update clock while date is showing
     }
 
-    // ── Check for pending alert (one-shot, highest priority after scroll) ──────
-    if (alertPending) {
-        alertPending = false;
+    // ── Check for pending message (one-shot, highest priority after scroll) ──────
+    if (messagePending) {
+        messagePending = false;
         _blinkScrollPhase2 = false;
-        if (alertMode == ALERT_MODE_SCROLL) {
-            _applyAlertBrightness();
-            _startScroll(alertMessage, alertDurationMs);
+        if (messageMode == MESSAGE_MODE_SCROLL) {
+            _applyMessageBrightness();
+            _startScroll(messageText, messageDurationMs);
         } else {
-            // ALERT_MODE_BLINK, ALERT_MODE_STATIC, ALERT_MODE_BLINK_SCROLL all start timed
-            _startTimedAlert();
+            // MESSAGE_MODE_BLINK, MESSAGE_MODE_STATIC, MESSAGE_MODE_BLINK_SCROLL all start timed
+            _startTimedMessage();
         }
         return;
     }

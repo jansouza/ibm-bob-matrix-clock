@@ -50,10 +50,10 @@ To install the ESP32 core (if not present): `arduino-cli core install esp32:esp3
 - **`ESP.restart()` is never called directly** — always via `scheduleRestart(delayMs)` so the HTTP response reaches the client first.
 - **`HTTPClient` is only called from `fetcherTick()`** — never inside HTTP handlers, because it is synchronous and would block the render loop.
 - **Always use `http.getString()`, never `http.getStream()`** — chunked/compressed responses are unreliable with `getStream()` on ESP32, producing spurious parse errors on valid payloads.
-- **All display strings must be UTF-8 → Latin-1 converted** before passing to `MD_Parola` / `MD_MAX72XX`. `alertMessage[]` is stored in Latin-1, not UTF-8.
-- **Alert pipeline order matters**: `utf8ToLatin1()` first, then `expandIconTags()` — icon tags contain ASCII-range brackets that survive the encoding step.
+- **All display strings must be UTF-8 → Latin-1 converted** before passing to `MD_Parola` / `MD_MAX72XX`. `messageText[]` is stored in Latin-1, not UTF-8.
+- **Message pipeline order matters**: `utf8ToLatin1()` first, then `expandIconTags()` — icon tags contain ASCII-range brackets that survive the encoding step.
 - **JSON always built/parsed with `ArduinoJson`** — never manual string concatenation.
-- **Alert slot is one-shot**: `alertPending` is set by the HTTP handler and cleared by `displayTick()` after one scroll completes. Only the most recent alert is kept.
+- **Message slot is one-shot**: `messagePending` is set by the HTTP handler and cleared by `displayTick()` after one scroll completes. Only the most recent message is kept.
 - **Slot 0 (clock) is the permanent base** — it has no interval (`slotIntervalMs[0] = 0`); other slots return to it after their scroll ends.
 - **`applyTimezone()` must run after `ntpBegin()`** — `configTime()` resets TZ to UTC internally. Also called inside `ntpTick()` during periodic re-sync (every `NTP_RESYNC_MS`) for the same reason.
 - **Two separate language settings**: `cfgLanguage` controls the on-device clock/date locale (weekday/month names); `cfgUiLanguage` controls the web panel's own UI language. They are stored independently in NVS.
@@ -79,10 +79,10 @@ To install the ESP32 core (if not present): `arduino-cli core install esp32:esp3
 ## Key Globals (globals.h)
 
 - `ntpSynced` — set true by `ntpTick()`, read by `displayTick()` to switch `--:--` → `HH:MM`
-- `alertPending` / `alertMessage[]` — set by HTTP handler, consumed (and cleared) by `displayTick()`
-- `alertBrightness` / `alertScrollSpeedMs` — per-alert overrides; `-1` means use configured global value
-- `slotEnabled[4]` — `{clock, alert, weather, quotes}` — disabled slots are silently skipped
-- `slotIntervalMs[4]` — clock slot is `0` (permanent base); alert slot is `0` (one-shot); default values in `globals.cpp` are `{0, 0, 60000, 120000}` regardless of `config.h` display defaults
+- `messagePending` / `messageText[]` — set by HTTP handler, consumed (and cleared) by `displayTick()`
+- `messageBrightness` / `messageScrollSpeedMs` — per-message overrides; `-1` means use configured global value
+- `slotEnabled[4]` — `{clock, message, weather, quotes}` — disabled slots are silently skipped
+- `slotIntervalMs[4]` — clock slot is `0` (permanent base); message slot is `0` (one-shot); default values in `globals.cpp` are `{0, 0, 60000, 120000}` regardless of `config.h` display defaults
 
 ## Hardware
 

@@ -44,7 +44,7 @@ smart-matrix-clock-esp32/
 **Status:** `[x] done`
 
 #### 1.2 — Globals
-- Create [`globals.h`](../globals.h) and [`globals.cpp`](../globals.cpp) declaring the shared state variables: `currentBrightness`, `scrollSpeed`, `ntpSynced`, `alertPending`, `alertMessage[]`, `activeSlot`, `slotEnabled[]`, `slotIntervalMs[]`.
+- Create [`globals.h`](../globals.h) and [`globals.cpp`](../globals.cpp) declaring the shared state variables: `currentBrightness`, `scrollSpeed`, `ntpSynced`, `messagePending`, `messageText[]`, `activeSlot`, `slotEnabled[]`, `slotIntervalMs[]`.
 - All variables `extern` in the `.h`, defined in the `.cpp`.
 
 **Status:** `[x] done`
@@ -114,7 +114,7 @@ smart-matrix-clock-esp32/
 
 **Objective:** the device exposes the full web panel and REST API; the clock shows localised date in periodic scroll; all configuration can be done from the panel.
 
-**Verifiable deliverable:** accessing `http://<ip>/` opens the panel; changing the timezone in the panel changes the time on the display; sending an alert message via the panel shows it on the display; periodic NTP re-sync works.
+**Verifiable deliverable:** accessing `http://<ip>/` opens the panel; changing the timezone in the panel changes the time on the display; sending a message via the panel shows it on the display; periodic NTP re-sync works.
 
 ### Sub-tasks
 
@@ -133,17 +133,17 @@ smart-matrix-clock-esp32/
   - `GET /api/status` → JSON with current time, active slot, `ntpSynced`, SSID, IP.
   - `GET /api/config` → JSON with all current settings.
   - `POST /api/config` → receives JSON, validates each field, calls `saveConfig()`, applies changes; responds before any reboot.
-  - `POST /api/alert` → receives `{"message": "...", "speed": N}`, validates, sets `alertMessage` and `alertPending = true`.
+  - `POST /api/message` → receives `{"message": "...", "speed": N}`, validates, sets `messageText` and `messagePending = true`.
   - `GET /api/timezones` → JSON array with available IANA names.
   - `POST /api/wifi` → saves new credentials and schedules `scheduleRestart(1500)`.
 - Validations: brightness ranges (0–15), scroll speed (10–200 ms), language in allowed list, timezone in IANA table, lat/lon in valid ranges (-90..90, -180..180).
 
 **Status:** `[x] done`
 
-#### 3.3 — Display: localised date and Alert message
+#### 3.3 — Display: localised date and Message
 - Expand [`display.cpp`](smart-matrix-clock-esp32/display.cpp):
   - `displayTick()` — add date display timer: when it fires, builds the string `"MON 14/07"` (using `locale_data` for the configured language) and scrolls it; after the scroll, returns to the time.
-  - Implement alert queue: when `alertPending == true` and no scroll is in progress, takes `alertMessage`, clears `alertPending`, executes scroll, then returns to normal flow.
+  - Implement message queue: when `messagePending == true` and no scroll is in progress, takes `messageText`, clears `messagePending`, executes scroll, then returns to normal flow.
   - Implement non-blocking scroll: each `displayTick()` call advances one scroll frame; the full loop never waits.
 
 **Status:** `[x] done`

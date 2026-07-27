@@ -100,11 +100,13 @@ static void _handleGetStatus(AsyncWebServerRequest* req) {
         preview[0] = '\0';
         if (quotesCacheStale) strncat(preview, "*", sizeof(preview) - strlen(preview) - 1);
         for (uint8_t i = 0; i < quoteCacheCount; i++) {
-            char entry[48];
-            snprintf(entry, sizeof(entry), "%s%s: %.2f %c%.2f%%",
+            char priceStr[24];
+            formatQuotePrice(quoteCache[i].price, cfgLocale, priceStr, sizeof(priceStr));
+            char entry[56];
+            snprintf(entry, sizeof(entry), "%s%s: %s %c%.2f%%",
                      (i > 0) ? "  " : "",
                      quoteCache[i].symbol,
-                     quoteCache[i].price,
+                     priceStr,
                      (quoteCache[i].changePercent >= 0) ? '+' : '-',
                      fabsf(quoteCache[i].changePercent));
             strncat(preview, entry, sizeof(preview) - strlen(preview) - 1);
@@ -125,7 +127,7 @@ static void _handleGetConfig(AsyncWebServerRequest* req) {
     doc["brightness"]       = currentBrightness;
     doc["scroll_speed_ms"]  = scrollSpeed;
     doc["timezone"]         = cfgTimezone;
-    doc["language"]         = cfgLanguage;
+    doc["locale"]           = cfgLocale;
     doc["ntp_server"]       = cfgNtpServer;
     doc["date_interval_ms"] = cfgDateIntervalMs;
     doc["date_enabled"]     = cfgDateEnabled;
@@ -190,14 +192,14 @@ static void _handlePostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t 
         changed = true;
     }
 
-    // ── language ──────────────────────────────────────────────────────────────
-    if (doc["language"].is<const char*>()) {
-        const char* lang = doc["language"].as<const char*>();
-        if (strcmp(lang, "pt") != 0 && strcmp(lang, "en") != 0) {
-            _sendError(req, 400, "language must be 'pt' or 'en'"); return;
+    // ── locale ────────────────────────────────────────────────────────────────
+    if (doc["locale"].is<const char*>()) {
+        const char* locale = doc["locale"].as<const char*>();
+        if (strcmp(locale, "pt") != 0 && strcmp(locale, "en") != 0) {
+            _sendError(req, 400, "locale must be 'pt' or 'en'"); return;
         }
-        strncpy(cfgLanguage, lang, LANG_CODE_MAX - 1);
-        cfgLanguage[LANG_CODE_MAX - 1] = '\0';
+        strncpy(cfgLocale, locale, LOCALE_CODE_MAX - 1);
+        cfgLocale[LOCALE_CODE_MAX - 1] = '\0';
         changed = true;
     }
 
@@ -323,9 +325,9 @@ static void _handlePostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t 
     _sendOk(req);
 }
 
-// ─── POST /api/alert ─────────────────────────────────────────────────────────
+// ─── POST /api/message ─────────────────────────────────────────────────────────
 
-static void _handlePostAlert(AsyncWebServerRequest* req, uint8_t* data, size_t len,
+static void _handlePostMessage(AsyncWebServerRequest* req, uint8_t* data, size_t len,
                              size_t index, size_t total) {
     (void)index; (void)total;
 
@@ -342,69 +344,69 @@ static void _handlePostAlert(AsyncWebServerRequest* req, uint8_t* data, size_t l
 
     // Convert UTF-8 → Latin-1, then resolve [icon] tags to CP437 special glyphs
     // (display driver expects Latin-1, with control bytes as icon glyphs)
-    char latin1msg[MAX_ALERT_LEN];
-    utf8ToLatin1(utf8msg, latin1msg, MAX_ALERT_LEN);
-    expandIconTags(latin1msg, alertMessage, MAX_ALERT_LEN);
+    char latin1msg[MAX_MESSAGE_LEN];
+    utf8ToLatin1(utf8msg, latin1msg, MAX_MESSAGE_LEN);
+    expandIconTags(latin1msg, messageText, MAX_MESSAGE_LEN);
 
     // Optional: mode and duration (only relevant for non-scroll modes)
     if (doc["mode"].is<int>()) {
         int m = doc["mode"].as<int>();
         if (m < 0 || m > 3) { _sendError(req, 400, "mode must be 0-3"); return; }
-        alertMode = (uint8_t)m;
+        messageMode = (uint8_t)m;
     }
     if (doc["duration_ms"].is<long>()) {
         long d = doc["duration_ms"].as<long>();
         if (d < 1000 || d > 60000) { _sendError(req, 400, "duration_ms must be 1000-60000"); return; }
-        alertDurationMs = (uint32_t)d;
+        messageDurationMs = (uint32_t)d;
     }
 
     // Optional: temporary brightness/scroll-speed override, active only while
-    // this alert is on screen — restored to the configured value afterward.
-    alertBrightness = -1;
+    // this message is on screen — restored to the configured value afterward.
+    messageBrightness = -1;
     if (doc["brightness"].is<int>()) {
         int v = doc["brightness"].as<int>();
         if (v < 0 || v > 15) { _sendError(req, 400, "brightness must be 0-15"); return; }
-        alertBrightness = (int16_t)v;
+        messageBrightness = (int16_t)v;
     }
-    alertScrollSpeedMs = -1;
+    messageScrollSpeedMs = -1;
     if (doc["scroll_speed_ms"].is<int>()) {
         int v = doc["scroll_speed_ms"].as<int>();
         if (v < 10 || v > 200) { _sendError(req, 400, "scroll_speed_ms must be 10-200"); return; }
-        alertScrollSpeedMs = v;
+        messageScrollSpeedMs = v;
     }
 
-    // Append to alert history ring buffer (newest entry overwrites oldest when full)
+    // Append to message history ring buffer (newest entry overwrites oldest when full)
     {
         uint8_t idx;
-        if (alertHistoryCount < ALERT_HISTORY_SIZE) {
-            idx = alertHistoryCount;
-            alertHistoryCount++;
+        if (messageHistoryCount < MESSAGE_HISTORY_SIZE) {
+            idx = messageHistoryCount;
+            messageHistoryCount++;
         } else {
             // Buffer full — overwrite the oldest entry and advance the head
-            idx = alertHistoryHead;
-            alertHistoryHead = (alertHistoryHead + 1) % ALERT_HISTORY_SIZE;
+            idx = messageHistoryHead;
+            messageHistoryHead = (messageHistoryHead + 1) % MESSAGE_HISTORY_SIZE;
         }
-        alertHistory[idx].timestamp = time(nullptr);
-        strncpy(alertHistory[idx].message, alertMessage, MAX_ALERT_LEN - 1);
-        alertHistory[idx].message[MAX_ALERT_LEN - 1] = '\0';
+        messageHistory[idx].timestamp = time(nullptr);
+        strncpy(messageHistory[idx].message, utf8msg, MAX_MESSAGE_LEN - 1);
+        messageHistory[idx].message[MAX_MESSAGE_LEN - 1] = '\0';
     }
 
-    alertPending = true;
+    messagePending = true;
     _sendOk(req);
 }
 
-// ─── GET /api/alerts/history ─────────────────────────────────────────────────
+// ─── GET /api/messages/history ─────────────────────────────────────────────────
 
-static void _handleGetAlertsHistory(AsyncWebServerRequest* req) {
+static void _handleGetMessagesHistory(AsyncWebServerRequest* req) {
     JsonDocument doc;
     JsonArray arr = doc.to<JsonArray>();
 
     // Walk the ring buffer from oldest to newest
-    for (uint8_t i = 0; i < alertHistoryCount; i++) {
-        uint8_t idx = (alertHistoryHead + i) % ALERT_HISTORY_SIZE;
+    for (uint8_t i = 0; i < messageHistoryCount; i++) {
+        uint8_t idx = (messageHistoryHead + i) % MESSAGE_HISTORY_SIZE;
         JsonObject entry = arr.add<JsonObject>();
-        entry["timestamp"] = (long long)alertHistory[idx].timestamp;
-        entry["message"]   = alertHistory[idx].message;
+        entry["timestamp"] = (long long)messageHistory[idx].timestamp;
+        entry["message"]   = messageHistory[idx].message;
     }
 
     String body;
@@ -492,6 +494,36 @@ static void _handlePostPreview(AsyncWebServerRequest* req, uint8_t* data, size_t
     _sendOk(req);
 }
 
+// ─── POST /api/fetch ────────────────────────────────────────────────────────
+// Force an immediate re-fetch of a slot's data, bypassing its update interval.
+// Body: {"slot": 2}   (2 = Weather, 3 = Quotes)
+// Only flags the fetch for the next fetcherTick() — the actual HTTPClient call
+// happens there, never in this handler (see AGENTS.md: HTTP handlers never do I/O).
+// The slot must be enabled; otherwise returns ok:false.
+
+static void _handlePostFetch(AsyncWebServerRequest* req, uint8_t* data, size_t len,
+                              size_t index, size_t total) {
+    (void)index; (void)total;
+
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, data, len);
+    if (err) { _sendError(req, 400, "Invalid JSON"); return; }
+
+    if (!doc["slot"].is<int>()) { _sendError(req, 400, "Missing 'slot' field"); return; }
+    int slot = doc["slot"].as<int>();
+    if (slot < 2 || slot > 3) { _sendError(req, 400, "slot must be 2 (weather) or 3 (quotes)"); return; }
+
+    if (slot == 2) {
+        if (!slotEnabled[2]) { _sendError(req, 400, "Weather slot is disabled"); return; }
+        fetcherReset();
+    } else {
+        if (!slotEnabled[3]) { _sendError(req, 400, "Quotes slot is disabled"); return; }
+        quotesFetcherReset();
+    }
+
+    _sendOk(req);
+}
+
 // ─── webRoutesBegin ───────────────────────────────────────────────────────────
 
 void webRoutesBegin(AsyncWebServer& server) {
@@ -500,20 +532,23 @@ void webRoutesBegin(AsyncWebServer& server) {
     server.on("/api/status",          HTTP_GET,  _handleGetStatus);
     server.on("/api/config",          HTTP_GET,  _handleGetConfig);
     server.on("/api/timezones",       HTTP_GET,  _handleGetTimezones);
-    server.on("/api/alerts/history",  HTTP_GET,  _handleGetAlertsHistory);
+    server.on("/api/messages/history",  HTTP_GET,  _handleGetMessagesHistory);
 
     // Body-receiving handlers (POST)
     server.on("/api/config", HTTP_POST, [](AsyncWebServerRequest* req){},
               nullptr, _handlePostConfig);
 
-    server.on("/api/alert", HTTP_POST, [](AsyncWebServerRequest* req){},
-              nullptr, _handlePostAlert);
+    server.on("/api/message", HTTP_POST, [](AsyncWebServerRequest* req){},
+              nullptr, _handlePostMessage);
 
     server.on("/api/wifi", HTTP_POST, [](AsyncWebServerRequest* req){},
               nullptr, _handlePostWifi);
 
     server.on("/api/preview", HTTP_POST, [](AsyncWebServerRequest* req){},
               nullptr, _handlePostPreview);
+
+    server.on("/api/fetch", HTTP_POST, [](AsyncWebServerRequest* req){},
+              nullptr, _handlePostFetch);
 
     // 404 handler
     server.onNotFound([](AsyncWebServerRequest* req){

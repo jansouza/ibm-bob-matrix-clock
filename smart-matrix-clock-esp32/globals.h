@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "config.h"
+#include <time.h>
 
 // ─── Weather cache (Phase 4) ──────────────────────────────────────────────────
 struct WeatherCache {
@@ -30,10 +31,10 @@ struct QuoteCache {
     bool     valid;                         // true once a successful fetch occurred
 };
 
-// ─── Alert history ────────────────────────────────────────────────────────────
-struct AlertHistoryEntry {
-    time_t  timestamp;                      // Unix time when the alert was received
-    char    message[MAX_ALERT_LEN];         // Latin-1 encoded message (as stored)
+// ─── Message history ──────────────────────────────────────────────────────────
+struct MessageHistoryEntry {
+    time_t  timestamp;                      // Unix time when the message was received
+    char    message[MAX_MESSAGE_LEN];       // UTF-8 encoded message, as originally submitted
 };
 
 // ─── Display settings ─────────────────────────────────────────────────────────
@@ -43,16 +44,16 @@ extern uint16_t scrollSpeed;          // ms per scroll frame
 // ─── NTP / time ───────────────────────────────────────────────────────────────
 extern bool     ntpSynced;            // true once first NTP sync is done
 
-// ─── Alert message ────────────────────────────────────────────────────────────
-extern bool     alertPending;         // set by HTTP handler, cleared by display
-extern char     alertMessage[];       // Latin-1 encoded, null-terminated
-extern uint8_t  alertMode;            // ALERT_MODE_SCROLL / BLINK / STATIC
-extern uint32_t alertDurationMs;      // duration for blink/static modes (ms)
-extern int16_t  alertBrightness;      // per-alert brightness override, 0–15; -1 = use currentBrightness
-extern int32_t  alertScrollSpeedMs;   // per-alert scroll speed override, ms; -1 = use scrollSpeed
-extern AlertHistoryEntry alertHistory[];  // ring buffer of recent alerts
-extern uint8_t  alertHistoryCount;    // number of valid entries (0..ALERT_HISTORY_SIZE)
-extern uint8_t  alertHistoryHead;     // index of the oldest entry (ring buffer head)
+// ─── Message ──────────────────────────────────────────────────────────────────
+extern bool     messagePending;       // set by HTTP handler, cleared by display
+extern char     messageText[];        // Latin-1 encoded, null-terminated
+extern uint8_t  messageMode;          // MESSAGE_MODE_SCROLL / BLINK / STATIC
+extern uint32_t messageDurationMs;    // duration for blink/static modes (ms)
+extern int16_t  messageBrightness;    // per-message brightness override, 0–15; -1 = use currentBrightness
+extern int32_t  messageScrollSpeedMs; // per-message scroll speed override, ms; -1 = use scrollSpeed
+extern MessageHistoryEntry messageHistory[];  // ring buffer of recent messages
+extern uint8_t  messageHistoryCount;  // number of valid entries (0..MESSAGE_HISTORY_SIZE)
+extern uint8_t  messageHistoryHead;   // index of the oldest entry (ring buffer head)
 
 // ─── Slot rotation ────────────────────────────────────────────────────────────
 extern uint8_t  activeSlot;           // index of the currently active slot
@@ -61,13 +62,13 @@ extern uint32_t slotIntervalMs[];     // how long each slot is displayed (ms)
 
 // ─── Persistent configuration (loaded at boot, saved on change) ───────────────
 extern char     cfgTimezone[];        // IANA timezone name (e.g. "America/Sao_Paulo")
-extern char     cfgLanguage[];        // "pt" or "en"
+extern char     cfgLocale[];           // "pt" or "en" — date names, number formatting, quote search language
 extern char     cfgNtpServer[];       // NTP server hostname
 extern char     cfgWifiSsid[];        // stored WiFi SSID (may be empty)
 extern char     cfgWifiPass[];        // stored WiFi password
 extern uint32_t cfgDateIntervalMs;    // how often date fires (ms); 0 = disabled
 extern bool     cfgDateEnabled;       // true = show date periodically
-extern char     cfgUiLanguage[];      // web panel UI language (e.g. "en", "pt") — independent of cfgLanguage
+extern char     cfgUiLanguage[];      // web panel UI language (e.g. "en", "pt") — independent of cfgLocale
 
 // ─── Weather configuration (Phase 4) ──────────────────────────────────────────
 extern float    cfgWeatherLat;        // latitude

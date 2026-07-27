@@ -51,8 +51,8 @@ void loadConfig() {
     _prefs.getString(NVS_KEY_TIMEZONE, cfgTimezone, NTP_TIMEZONE_MAX);
     if (cfgTimezone[0] == '\0') strncpy(cfgTimezone, NTP_TIMEZONE_DEFAULT, NTP_TIMEZONE_MAX - 1);
 
-    _prefs.getString(NVS_KEY_LANGUAGE, cfgLanguage, LANG_CODE_MAX);
-    if (cfgLanguage[0] == '\0') strncpy(cfgLanguage, LANG_DEFAULT, LANG_CODE_MAX - 1);
+    _prefs.getString(NVS_KEY_LOCALE, cfgLocale, LOCALE_CODE_MAX);
+    if (cfgLocale[0] == '\0') strncpy(cfgLocale, LOCALE_DEFAULT, LOCALE_CODE_MAX - 1);
 
     _prefs.getString(NVS_KEY_NTP_SERVER, cfgNtpServer, NTP_SERVER_MAX);
     if (cfgNtpServer[0] == '\0') strncpy(cfgNtpServer, NTP_SERVER_DEFAULT, NTP_SERVER_MAX - 1);
@@ -102,7 +102,7 @@ void saveConfig() {
     _prefs.putUShort(NVS_KEY_SCROLL_SPD, scrollSpeed);
 
     _prefs.putString(NVS_KEY_TIMEZONE,   cfgTimezone);
-    _prefs.putString(NVS_KEY_LANGUAGE,   cfgLanguage);
+    _prefs.putString(NVS_KEY_LOCALE,   cfgLocale);
     _prefs.putString(NVS_KEY_NTP_SERVER, cfgNtpServer);
     _prefs.putString(NVS_KEY_WIFI_SSID,  cfgWifiSsid);
     _prefs.putString(NVS_KEY_WIFI_PASS,  cfgWifiPass);
@@ -159,7 +159,7 @@ void factoryReset() {
     scrollSpeed       = DEFAULT_SCROLL_SPEED_MS;
 
     strncpy(cfgTimezone,  NTP_TIMEZONE_DEFAULT, NTP_TIMEZONE_MAX - 1);
-    strncpy(cfgLanguage,  LANG_DEFAULT,         LANG_CODE_MAX - 1);
+    strncpy(cfgLocale,  LOCALE_DEFAULT,         LOCALE_CODE_MAX - 1);
     strncpy(cfgNtpServer, NTP_SERVER_DEFAULT,   NTP_SERVER_MAX - 1);
     cfgWifiSsid[0] = '\0';
     cfgWifiPass[0] = '\0';

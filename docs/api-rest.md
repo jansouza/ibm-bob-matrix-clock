@@ -5,6 +5,24 @@ Base URL: `http://<DEVICE_IP>`
 
 ---
 
+## Endpoint summary
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | Web interface |
+| GET | `/api/status` | Real-time operational state |
+| GET | `/api/config` | Read persisted configuration |
+| POST | `/api/config` | Update configuration |
+| POST | `/api/message` | Send a message to the display |
+| GET | `/api/messages/history` | Last 20 sent messages (timestamp + message) |
+| GET | `/api/timezones` | List of supported timezones |
+| POST | `/api/wifi` | Save WiFi credentials and reboot |
+| POST | `/api/preview` | Force-show a slot on the display immediately |
+
+> **Note:** none of the endpoints currently require authentication — anyone on the same network as the device can call them. An API-key mechanism was implemented and later removed because it broke the web interface's own write actions (see [`docs/enhancements-plan.md`](enhancements-plan.md), Sub-Task 3, for the planned replacement).
+
+---
+
 ## General conventions
 
 | Item | Detail |
@@ -47,7 +65,7 @@ Returns the current operational state of the device.
 | Field | Type | Description |
 |---|---|---|
 | `ntp_synced` | bool | `true` after the first successful NTP synchronisation |
-| `active_slot` | int | Index of the currently active slot (0=clock, 1=alert, 2=weather, 3=quotes) |
+| `active_slot` | int | Index of the currently active slot (0=clock, 1=message, 2=weather, 3=quotes) |
 | `ssid` | string | SSID of the connected WiFi network; `""` when in AP mode |
 | `ip` | string | IP address of the active interface (station or AP softIP) |
 | `time_str` | string | Current time as `HH:MM`; `"--:--"` if NTP has not synced yet |
@@ -65,7 +83,7 @@ Returns the full persisted configuration.
   "brightness":         4,
   "scroll_speed_ms":    50,
   "timezone":           "America/Sao_Paulo",
-  "language":           "pt",
+  "locale":             "pt",
   "ntp_server":         "pool.ntp.org",
   "date_interval_ms":   30000,
   "date_enabled":       true,
@@ -104,7 +122,7 @@ Updates one or more configuration fields. Only fields present in the body are pr
 | Field | Type | Range | Description |
 |---|---|---|---|
 | `timezone` | string | — | IANA timezone name (e.g. `"America/Sao_Paulo"`). Must be a valid entry from `GET /api/timezones` |
-| `language` | string | `"pt"` or `"en"` | Language for weekday names shown on the date screen |
+| `locale` | string | `"pt"` or `"en"` | Content locale: weekday names on the date screen, quote number formatting, and the geocoding search language used by the weather slot |
 | `ntp_server` | string | 1–63 chars | NTP server hostname (default: `"pool.ntp.org"`) |
 | `date_enabled` | bool | — | `true` to show the date periodically |
 | `date_interval_ms` | int | 5000–300000 | Interval between date appearances (ms) |
@@ -157,7 +175,7 @@ curl -X POST http://192.168.1.42/api/config \
 | 400 | `"brightness must be 0-15"` | Value out of range |
 | 400 | `"scroll_speed_ms must be 10-200"` | Value out of range |
 | 400 | `"Unknown timezone"` | IANA name not found in the internal table |
-| 400 | `"language must be 'pt' or 'en'"` | Unrecognised value |
+| 400 | `"locale must be 'pt' or 'en'"` | Unrecognised value |
 | 400 | `"ntp_server invalid length"` | Empty string or longer than 63 chars |
 | 400 | `"date_interval_ms out of range"` | Value outside 5000–300000 ms |
 | 400 | `"weather_display_ms out of range"` | Value outside 5000–300000 ms |
@@ -165,11 +183,11 @@ curl -X POST http://192.168.1.42/api/config \
 
 ---
 
-### `POST /api/alert`
+### `POST /api/message`
 
-Sends an alert message to be displayed immediately on the LED matrix.  
-The alert has **top priority**: it interrupts the current slot and is shown next.  
-It is **one-shot**: only the most recent alert is stored.
+Sends a message to be displayed immediately on the LED matrix.  
+The message has **top priority**: it interrupts the current slot and is shown next.  
+It is **one-shot**: only the most recent message is stored.
 
 **Content-Type:** `application/json`
 
@@ -177,7 +195,7 @@ It is **one-shot**: only the most recent alert is stored.
 
 ```json
 {
-  "message":         "Alert text",
+  "message":         "Message text",
   "mode":            0,
   "duration_ms":     5000,
   "brightness":      15,
@@ -190,8 +208,8 @@ It is **one-shot**: only the most recent alert is stored.
 | `message` | string | **yes** | 1–127 chars | Text to display. Accepts UTF-8 (accents, special characters). Max 127 useful characters. May contain `[icon]` tags (see below). |
 | `mode` | int | no | 0–3 | Display mode (see table below). Default: previously configured value (default `0`) |
 | `duration_ms` | int | no | 1000–60000 | Duration in ms for Blink and Static modes. For Blink+Scroll, this is the **total** time for the repeating blink→scroll cycle. Ignored in pure Scroll mode. |
-| `brightness` | int | no | 0–15 | Temporary brightness override, active only while this alert is on screen. Reverts to the configured brightness (`POST /api/config`) once the alert ends. Omit to use the configured brightness. |
-| `scroll_speed_ms` | int | no | 10–200 | Temporary scroll speed override (ms per frame), active only while this alert is on screen. Reverts to the configured scroll speed once the alert ends. Omit to use the configured scroll speed. |
+| `brightness` | int | no | 0–15 | Temporary brightness override, active only while this message is on screen. Reverts to the configured brightness (`POST /api/config`) once the message ends. Omit to use the configured brightness. |
+| `scroll_speed_ms` | int | no | 10–200 | Temporary scroll speed override (ms per frame), active only while this message is on screen. Reverts to the configured scroll speed once the message ends. Omit to use the configured scroll speed. |
 
 #### Icon tags
 
@@ -235,33 +253,33 @@ Example: `"Warning [warn] test"` displays as `Warning <warn-glyph> test`.
 #### Examples
 
 ```bash
-# Simple scrolling alert
-curl -X POST http://192.168.1.42/api/alert \
+# Simple scrolling message
+curl -X POST http://192.168.1.42/api/message \
   -H "Content-Type: application/json" \
   -d '{"message": "Door open!"}'
 
-# Blinking alert for 8 seconds
-curl -X POST http://192.168.1.42/api/alert \
+# Blinking message for 8 seconds
+curl -X POST http://192.168.1.42/api/message \
   -H "Content-Type: application/json" \
-  -d '{"message": "ALERT", "mode": 1, "duration_ms": 8000}'
+  -d '{"message": "MESSAGE", "mode": 1, "duration_ms": 8000}'
 
-# Static alert for 10 seconds
-curl -X POST http://192.168.1.42/api/alert \
+# Static message for 10 seconds
+curl -X POST http://192.168.1.42/api/message \
   -H "Content-Type: application/json" \
   -d '{"message": "MEETING", "mode": 2, "duration_ms": 10000}'
 
 # Blink 5 s, scroll, repeat the cycle for 60 s total — long message
-curl -X POST http://192.168.1.42/api/alert \
+curl -X POST http://192.168.1.42/api/message \
   -H "Content-Type: application/json" \
   -d '{"message": "Critical temperature on server A3!", "mode": 3, "duration_ms": 60000}'
 
 # Message with an icon tag
-curl -X POST http://192.168.1.42/api/alert \
+curl -X POST http://192.168.1.42/api/message \
   -H "Content-Type: application/json" \
   -d '{"message": "Warning [warn] test"}'
 
-# Full brightness + faster scroll for a high-priority alert
-curl -X POST http://192.168.1.42/api/alert \
+# Full brightness + faster scroll for a high-priority message
+curl -X POST http://192.168.1.42/api/message \
   -H "Content-Type: application/json" \
   -d '{"message": "FIRE DRILL", "mode": 1, "duration_ms": 10000, "brightness": 15, "scroll_speed_ms": 20}'
 ```
@@ -277,6 +295,32 @@ curl -X POST http://192.168.1.42/api/alert \
 | 400 | `"duration_ms must be 1000-60000"` | `duration_ms` value out of range |
 | 400 | `"brightness must be 0-15"` | `brightness` value out of range |
 | 400 | `"scroll_speed_ms must be 10-200"` | `scroll_speed_ms` value out of range |
+
+---
+
+### `GET /api/messages/history`
+
+Returns the ring buffer of the most recently sent messages (up to the last 20), oldest first. Useful for debugging and auditing what was shown on the display. The buffer is kept in RAM only — it resets to empty on reboot.
+
+**Response `200`:**
+
+```json
+[
+  { "timestamp": 1785000000, "message": "Door open!" },
+  { "timestamp": 1785000123, "message": "Warning test" }
+]
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `timestamp` | int | Unix time (seconds) when the message was received. `0` if NTP was not yet synced at the time. |
+| `message` | string | The message text as stored internally (Latin-1, with icon tags already expanded to their glyph byte — see [Icon tags](#icon-tags) above) |
+
+#### Examples
+
+```bash
+curl http://192.168.1.42/api/messages/history
+```
 
 ---
 
@@ -425,19 +469,4 @@ If the device has no saved WiFi credentials, or if the connection fails, it ente
 
 Connect to this network and open `http://192.168.4.1` to configure WiFi via the web interface, or use `POST /api/wifi` directly.
 
----
 
-## Endpoint summary
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/` | Web interface |
-| GET | `/api/status` | Real-time operational state |
-| GET | `/api/config` | Read persisted configuration |
-| POST | `/api/config` | Update configuration |
-| POST | `/api/alert` | Send an alert message to the display |
-| GET | `/api/timezones` | List of supported timezones |
-| POST | `/api/wifi` | Save WiFi credentials and reboot |
-| POST | `/api/preview` | Force-show a slot on the display immediately |
-
-> **Note:** none of the endpoints currently require authentication — anyone on the same network as the device can call them. An API-key mechanism was implemented and later removed because it broke the web interface's own write actions (see [`docs/enhancements-plan.md`](enhancements-plan.md), Sub-Task 3, for the planned replacement).

@@ -134,52 +134,22 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
   </div>
 
   <div class="tabs">
-    <button class="tab active" data-tab="clock">&#128336; <span data-i18n="tab.clock">Clock</span></button>
-    <button class="tab" data-tab="alert">&#128276; <span data-i18n="tab.alert">Alert</span></button>
+    <button class="tab active" data-tab="display">&#128421; <span data-i18n="tab.display">Display</span></button>
+    <button class="tab" data-tab="clock">&#128336; <span data-i18n="tab.clock">Clock</span></button>
+    <button class="tab" data-tab="message">&#128276; <span data-i18n="tab.message">Message</span></button>
     <button class="tab" data-tab="weather">&#127780; <span data-i18n="tab.weather">Weather</span></button>
     <button class="tab" data-tab="quotes">&#128200; <span data-i18n="tab.quotes">Quotes</span></button>
     <button class="tab" data-tab="network">&#128246; <span data-i18n="tab.network">Network</span></button>
   </div>
 
-  <!-- ── CLOCK TAB ────────────────────────────────────────────────────── -->
-  <div class="panel active" id="tab-clock">
+  <!-- ── DISPLAY TAB ──────────────────────────────────────────────────── -->
+  <div class="panel active" id="tab-display">
     <div class="card">
       <h2 data-i18n="clock.preview">Live preview</h2>
       <div class="preview" id="live-preview">--:--</div>
-    </div>
-
-    <div class="card">
-      <h2 data-i18n="clock.timeAndTz">Time and Timezone</h2>
-      <div class="field">
-        <label data-i18n="clock.timezone">Timezone (IANA)</label>
-        <select id="cfg-timezone"></select>
-      </div>
-      <div class="row">
-        <div class="field">
-          <label data-i18n="clock.dateLanguage">Date language</label>
-          <select id="cfg-language">
-            <option value="pt">Portugu&#234;s</option>
-            <option value="en">English</option>
-          </select>
-        </div>
-        <div class="field">
-          <label data-i18n="clock.ntpServer">NTP server</label>
-          <input id="cfg-ntp-server" type="text" maxlength="63"/>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2 data-i18n="clock.date">Date</h2>
-      <div class="toggle-row" style="margin-bottom:10px">
-        <span style="font-size:13px;font-weight:500;color:#c9d1d9" data-i18n="clock.showDatePeriodically">Show date periodically</span>
-        <label class="toggle"><input type="checkbox" id="cfg-date-en"/><span class="slider-toggle"></span></label>
-      </div>
-      <div id="date-options">
-        <div class="field">
-          <label data-i18n="clock.dateInterval">Display interval (seconds)</label>
-          <input id="cfg-date-interval" type="number" min="5" max="300"/>
-        </div>
+      <div class="actions" style="justify-content:flex-start;margin-top:12px">
+        <button class="btn btn-secondary" id="btn-preview-weather-2" data-i18n="clock.previewWeather">&#127780; Preview Weather</button>
+        <button class="btn btn-secondary" id="btn-preview-quotes-2" data-i18n="clock.previewQuotes">&#128200; Preview Quotes</button>
       </div>
     </div>
 
@@ -204,6 +174,13 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
         </div>
         <div class="hint" style="margin-top:6px" data-i18n="clock.scrollHint">10 ms = fastest &mdash; 200 ms = slowest</div>
       </div>
+      <div class="field" style="margin-top:14px">
+        <label data-i18n="clock.locale">Locale (date, numbers, quotes)</label>
+        <select id="cfg-locale">
+          <option value="pt">Portugu&#234;s</option>
+          <option value="en">English</option>
+        </select>
+      </div>
     </div>
 
     <div class="actions">
@@ -211,71 +188,104 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
     </div>
   </div>
 
-  <!-- ── ALERT TAB ───────────────────────────────────────────────────── -->
-  <div class="panel" id="tab-alert">
+  <!-- ── CLOCK TAB ────────────────────────────────────────────────────── -->
+  <div class="panel" id="tab-clock">
     <div class="card">
-      <h2 data-i18n="alert.title">Alert Message</h2>
+      <h2 data-i18n="clock.timeAndTz">Time and Timezone</h2>
       <div class="field">
-        <label data-i18n="alert.message">Message (max. 127 chars)</label>
-        <input id="alert-msg" type="text" maxlength="127" data-i18n-ph="alert.placeholder" placeholder="Type a message..."/>
+        <label data-i18n="clock.timezone">Timezone (IANA)</label>
+        <select id="cfg-timezone"></select>
       </div>
       <div class="field">
-        <label data-i18n="alert.icons">Icons</label>
-        <div id="alert-icon-row" class="icon-row"></div>
+        <label data-i18n="clock.ntpServer">NTP server</label>
+        <input id="cfg-ntp-server" type="text" maxlength="63"/>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="clock.date">Date</h2>
+      <div class="toggle-row" style="margin-bottom:10px">
+        <span style="font-size:13px;font-weight:500;color:#c9d1d9" data-i18n="clock.showDatePeriodically">Show date periodically</span>
+        <label class="toggle"><input type="checkbox" id="cfg-date-en"/><span class="slider-toggle"></span></label>
+      </div>
+      <div id="date-options">
+        <div class="field">
+          <label data-i18n="clock.dateInterval">Display interval (seconds)</label>
+          <input id="cfg-date-interval" type="number" min="5" max="300"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="btn-save-clock-tz" data-i18n="common.saveSettings">Save settings</button>
+    </div>
+  </div>
+
+  <!-- ── MESSAGE TAB ──────────────────────────────────────────────────── -->
+  <div class="panel" id="tab-message">
+    <div class="card">
+      <h2 data-i18n="message.title">Message</h2>
+      <div class="field">
+        <label data-i18n="message.text">Message (max. 127 chars)</label>
+        <input id="message-text" type="text" maxlength="127" data-i18n-ph="message.placeholder" placeholder="Type a message..."/>
       </div>
       <div class="field">
-        <label data-i18n="alert.preview">Preview</label>
-        <div class="preview" id="alert-preview">&nbsp;</div>
-        <div class="hint" id="alert-preview-overflow"></div>
+        <label data-i18n="message.icons">Icons</label>
+        <div id="message-icon-row" class="icon-row"></div>
+      </div>
+      <div class="field">
+        <label data-i18n="message.preview">Preview</label>
+        <div class="preview" id="message-preview">&nbsp;</div>
+        <div class="hint" id="message-preview-overflow"></div>
       </div>
       <div class="row3">
         <div class="field">
-          <label data-i18n="alert.mode">Display mode</label>
-          <select id="alert-mode">
-            <option value="0" data-i18n="alert.modeScroll">&#8618; Scroll</option>
-            <option value="1" data-i18n="alert.modeBlink">&#10022; Blink</option>
-            <option value="2" data-i18n="alert.modeStatic">&#9632; Static</option>
-            <option value="3" data-i18n="alert.modeBlinkScroll">&#10022;&#8618; Blink + Scroll</option>
+          <label data-i18n="message.mode">Display mode</label>
+          <select id="message-mode">
+            <option value="0" data-i18n="message.modeScroll">&#8618; Scroll</option>
+            <option value="1" data-i18n="message.modeBlink">&#10022; Blink</option>
+            <option value="2" data-i18n="message.modeStatic">&#9632; Static</option>
+            <option value="3" data-i18n="message.modeBlinkScroll">&#10022;&#8618; Blink + Scroll</option>
           </select>
         </div>
         <div class="field">
-          <label data-i18n="alert.duration">Duration (seconds)</label>
-          <input id="alert-duration" type="number" min="1" max="60" value="5"/>
-          <div class="hint" data-i18n="alert.durationHint">Time shown on the display</div>
+          <label data-i18n="message.duration">Duration (seconds)</label>
+          <input id="message-duration" type="number" min="1" max="60" value="5"/>
+          <div class="hint" data-i18n="message.durationHint">Time shown on the display</div>
         </div>
         <div class="field" style="display:flex;align-items:flex-end">
-          <button class="btn btn-primary" id="btn-send-alert" style="width:100%" data-i18n="alert.send">Send</button>
+          <button class="btn btn-primary" id="btn-send-message" style="width:100%" data-i18n="message.send">Send</button>
         </div>
       </div>
       <div class="toggle-row">
-        <span data-i18n="alert.override">Override brightness/speed for this alert</span>
-        <label class="toggle"><input type="checkbox" id="alert-override-en"/><span class="slider-toggle"></span></label>
+        <span data-i18n="message.override">Override brightness/speed for this message</span>
+        <label class="toggle"><input type="checkbox" id="message-override-en"/><span class="slider-toggle"></span></label>
       </div>
-      <div id="alert-override-fields" style="display:none">
+      <div id="message-override-fields" style="display:none">
         <div class="range-field">
-          <label><span data-i18n="clock.brightness">Brightness</span>: <span id="alert-brightness-val">15</span> / 15</label>
+          <label><span data-i18n="clock.brightness">Brightness</span>: <span id="message-brightness-val">15</span> / 15</label>
           <div class="range-row">
             <span style="font-size:12px;color:#8b949e">0</span>
-            <input id="alert-brightness" type="range" min="0" max="15" value="15"/>
+            <input id="message-brightness" type="range" min="0" max="15" value="15"/>
             <span style="font-size:12px;color:#8b949e">15</span>
-            <span class="range-val" id="alert-brightness-val-badge">15</span>
+            <span class="range-val" id="message-brightness-val-badge">15</span>
           </div>
         </div>
         <div class="range-field">
-          <label><span data-i18n="clock.scrollSpeed">Scroll speed</span>: <span id="alert-speed-val">50</span> ms/frame</label>
+          <label><span data-i18n="clock.scrollSpeed">Scroll speed</span>: <span id="message-speed-val">50</span> ms/frame</label>
           <div class="range-row">
             <span style="font-size:12px;color:#8b949e" data-i18n="clock.fast">Fast</span>
-            <input id="alert-scroll-speed" type="range" min="10" max="200" value="50"/>
+            <input id="message-scroll-speed" type="range" min="10" max="200" value="50"/>
             <span style="font-size:12px;color:#8b949e" data-i18n="clock.slow">Slow</span>
-            <span class="range-val" id="alert-speed-val-badge">50</span>
+            <span class="range-val" id="message-speed-val-badge">50</span>
           </div>
         </div>
       </div>
     </div>
     <div class="card">
-      <h2 data-i18n="alert.historyTitle">Alert History</h2>
-      <div id="alert-history-list" style="display:flex;flex-direction:column;gap:6px">
-        <div style="color:#8b949e;font-size:13px" data-i18n="alert.historyEmpty">No alerts sent yet.</div>
+      <h2 data-i18n="message.historyTitle">Message History</h2>
+      <div id="message-history-list" style="display:flex;flex-direction:column;gap:6px">
+        <div style="color:#8b949e;font-size:13px" data-i18n="message.historyEmpty">No messages sent yet.</div>
       </div>
     </div>
   </div>
@@ -332,6 +342,7 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
       </div>
     </div>
     <div class="actions">
+      <button class="btn btn-secondary" id="btn-fetch-weather" data-i18n="weather.fetchNow">Refresh now</button>
       <button class="btn btn-secondary" id="btn-preview-weather" data-i18n="weather.previewOnDisplay">Preview on display</button>
       <button class="btn btn-primary" id="btn-save-weather" data-i18n="common.saveSettings">Save settings</button>
     </div>
@@ -372,6 +383,7 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
       </div>
     </div>
     <div class="actions">
+      <button class="btn btn-secondary" id="btn-fetch-quotes" data-i18n="quotes.fetchNow">Refresh now</button>
       <button class="btn btn-secondary" id="btn-preview-quotes" data-i18n="quotes.previewOnDisplay">Preview on display</button>
       <button class="btn btn-primary" id="btn-save-quotes" data-i18n="common.saveSettings">Save settings</button>
     </div>
@@ -422,12 +434,12 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
 var I18N = {
   en: {
     'status.ntp': 'NTP', 'status.slot': 'Slot', 'status.wifi': 'WiFi',
-    'tab.clock': 'Clock', 'tab.alert': 'Alert', 'tab.weather': 'Weather',
+    'tab.display': 'Display', 'tab.clock': 'Clock', 'tab.message': 'Message', 'tab.weather': 'Weather',
     'tab.quotes': 'Quotes', 'tab.network': 'Network',
     'clock.preview': 'Live preview',
     'clock.timeAndTz': 'Time and Timezone',
     'clock.timezone': 'Timezone (IANA)',
-    'clock.dateLanguage': 'Date language',
+    'clock.locale': 'Locale (date, numbers, quotes)',
     'clock.ntpServer': 'NTP server',
     'clock.date': 'Date',
     'clock.showDatePeriodically': 'Show date periodically',
@@ -437,24 +449,26 @@ var I18N = {
     'clock.scrollSpeed': 'Scroll speed',
     'clock.fast': 'Fast', 'clock.slow': 'Slow',
     'clock.scrollHint': '10 ms = fastest &mdash; 200 ms = slowest',
-    'alert.title': 'Alert Message',
-    'alert.message': 'Message (max. 127 chars)',
-    'alert.placeholder': 'Type a message...',
-    'alert.mode': 'Display mode',
-    'alert.modeScroll': '&#8618; Scroll',
-    'alert.modeBlink': '&#10022; Blink',
-    'alert.modeStatic': '&#9632; Static',
-    'alert.modeBlinkScroll': '&#10022;&#8618; Blink + Scroll',
-    'alert.icons': 'Icons',
-    'alert.preview': 'Preview',
-    'alert.multiScreen': 'Message is longer than one screen — it will scroll',
-    'alert.duration': 'Duration (seconds)',
-    'alert.durationHint': 'Time shown on the display',
-    'alert.override': 'Override brightness/speed for this alert',
-    'alert.send': 'Send',
-    'alert.historyTitle': 'Alert History',
-    'alert.historyEmpty': 'No alerts sent yet.',
-    'alert.historyRefresh': 'Refresh',
+    'clock.previewWeather': '&#127780; Preview Weather',
+    'clock.previewQuotes': '&#128200; Preview Quotes',
+    'message.title': 'Message',
+    'message.text': 'Message (max. 127 chars)',
+    'message.placeholder': 'Type a message...',
+    'message.mode': 'Display mode',
+    'message.modeScroll': '&#8618; Scroll',
+    'message.modeBlink': '&#10022; Blink',
+    'message.modeStatic': '&#9632; Static',
+    'message.modeBlinkScroll': '&#10022;&#8618; Blink + Scroll',
+    'message.icons': 'Icons',
+    'message.preview': 'Preview',
+    'message.multiScreen': 'Message is longer than one screen — it will scroll',
+    'message.duration': 'Duration (seconds)',
+    'message.durationHint': 'Time shown on the display',
+    'message.override': 'Override brightness/speed for this message',
+    'message.send': 'Send',
+    'message.historyTitle': 'Message History',
+    'message.historyEmpty': 'No messages sent yet.',
+    'message.historyRefresh': 'Refresh',
     'weather.slotTitle': 'Weather Slot',
     'weather.enable': 'Enable weather slot',
     'weather.location': 'Location',
@@ -469,6 +483,7 @@ var I18N = {
     'weather.citySelected': 'Location set',
     'weather.tempUnit': 'Temperature unit',
     'weather.previewOnDisplay': 'Preview on display',
+    'weather.fetchNow': 'Refresh now',
     'weather.cacheTitle': 'Last data',
     'weather.noCache': 'No data yet — enable slot and wait for first fetch',
     'weather.cacheStale': '* Stale — last fetch failed',
@@ -478,6 +493,7 @@ var I18N = {
     'quotes.tickersLabel': 'Comma-separated tickers',
     'quotes.tickersHint': 'E.g.: PETR4.SA, AAPL, BTC-USD &mdash; max. 8 tickers',
     'quotes.previewOnDisplay': 'Preview on display',
+    'quotes.fetchNow': 'Refresh now',
     'quotes.cacheTitle': 'Last data',
     'quotes.noCache': 'No data yet — enable slot and wait for first fetch',
     'quotes.cacheStale': '* Stale — last fetch failed',
@@ -494,20 +510,21 @@ var I18N = {
     'status.connected': 'Connected', 'status.noSync': 'No sync',
     'toast.saved': 'Saved!', 'toast.error': 'Error: ',
     'toast.networkError': 'Network error',
-    'toast.alertSent': 'Alert sent!',
+    'toast.messageSent': 'Message sent!',
     'toast.previewSent': 'Sent to display!',
+    'toast.fetchQueued': 'Refreshing…',
     'toast.ssidEmpty': 'SSID cannot be empty',
     'toast.confirmRestart': 'This will restart the device. Continue?',
     'toast.savedRestarting': 'Saved! Restarting...'
   },
   pt: {
     'status.ntp': 'NTP', 'status.slot': 'Slot', 'status.wifi': 'WiFi',
-    'tab.clock': 'Rel&#243;gio', 'tab.alert': 'Alerta', 'tab.weather': 'Clima',
+    'tab.display': 'Display', 'tab.clock': 'Rel&#243;gio', 'tab.message': 'Mensagem', 'tab.weather': 'Clima',
     'tab.quotes': 'Cota&#231;&#245;es', 'tab.network': 'Rede',
     'clock.preview': 'Preview ao vivo',
     'clock.timeAndTz': 'Hora e Fuso',
     'clock.timezone': 'Fuso hor&#225;rio (IANA)',
-    'clock.dateLanguage': 'Idioma da data',
+    'clock.locale': 'Idioma (data, n&#250;meros, cota&#231;&#245;es)',
     'clock.ntpServer': 'Servidor NTP',
     'clock.date': 'Data',
     'clock.showDatePeriodically': 'Exibir data periodicamente',
@@ -517,24 +534,26 @@ var I18N = {
     'clock.scrollSpeed': 'Velocidade de scroll',
     'clock.fast': 'R&#225;pido', 'clock.slow': 'Lento',
     'clock.scrollHint': '10 ms = mais r&#225;pido &mdash; 200 ms = mais lento',
-    'alert.title': 'Mensagem de Alerta',
-    'alert.message': 'Mensagem (m&#225;x. 127 chars)',
-    'alert.placeholder': 'Digite uma mensagem...',
-    'alert.mode': 'Modo de exibi&#231;&#227;o',
-    'alert.modeScroll': '&#8618; Scroll',
-    'alert.modeBlink': '&#10022; Piscar',
-    'alert.modeStatic': '&#9632; Est&#225;tico',
-    'alert.modeBlinkScroll': '&#10022;&#8618; Piscar + Scroll',
-    'alert.icons': '&#205;cones',
-    'alert.preview': 'Pr&#233;-visualiza&#231;&#227;o',
-    'alert.multiScreen': 'Mensagem maior que uma tela &#8212; ir&#225; rolar (scroll)',
-    'alert.duration': 'Dura&#231;&#227;o (segundos)',
-    'alert.durationHint': 'Tempo de exibi&#231;&#227;o no display',
-    'alert.override': 'Sobrescrever brilho/velocidade para este alerta',
-    'alert.send': 'Enviar',
-    'alert.historyTitle': 'Hist&#243;rico de Alertas',
-    'alert.historyEmpty': 'Nenhum alerta enviado ainda.',
-    'alert.historyRefresh': 'Atualizar',
+    'clock.previewWeather': '&#127780; Ver Clima',
+    'clock.previewQuotes': '&#128200; Ver Cota&#231;&#245;es',
+    'message.title': 'Mensagem',
+    'message.text': 'Mensagem (m&#225;x. 127 chars)',
+    'message.placeholder': 'Digite uma mensagem...',
+    'message.mode': 'Modo de exibi&#231;&#227;o',
+    'message.modeScroll': '&#8618; Scroll',
+    'message.modeBlink': '&#10022; Piscar',
+    'message.modeStatic': '&#9632; Est&#225;tico',
+    'message.modeBlinkScroll': '&#10022;&#8618; Piscar + Scroll',
+    'message.icons': '&#205;cones',
+    'message.preview': 'Pr&#233;-visualiza&#231;&#227;o',
+    'message.multiScreen': 'Mensagem maior que uma tela &#8212; ir&#225; rolar (scroll)',
+    'message.duration': 'Dura&#231;&#227;o (segundos)',
+    'message.durationHint': 'Tempo de exibi&#231;&#227;o no display',
+    'message.override': 'Sobrescrever brilho/velocidade para esta mensagem',
+    'message.send': 'Enviar',
+    'message.historyTitle': 'Hist&#243;rico de Mensagens',
+    'message.historyEmpty': 'Nenhuma mensagem enviada ainda.',
+    'message.historyRefresh': 'Atualizar',
     'weather.slotTitle': 'Slot de Clima',
     'weather.enable': 'Habilitar slot de clima',
     'weather.location': 'Localiza&#231;&#227;o',
@@ -549,6 +568,7 @@ var I18N = {
     'weather.citySelected': 'Localiza&#231;&#227;o definida',
     'weather.tempUnit': 'Unidade de temperatura',
     'weather.previewOnDisplay': 'Mostrar no display agora',
+    'weather.fetchNow': 'Atualizar agora',
     'weather.cacheTitle': '&#218;ltimos dados',
     'weather.noCache': 'Sem dados ainda &#8212; habilite o slot e aguarde o primeiro fetch',
     'weather.cacheStale': '* Desatualizado &#8212; &#250;ltimo fetch falhou',
@@ -558,6 +578,7 @@ var I18N = {
     'quotes.tickersLabel': 'Tickers separados por v&#237;rgula',
     'quotes.tickersHint': 'Ex.: PETR4.SA, AAPL, BTC-USD &mdash; m&#225;x. 8 tickers',
     'quotes.previewOnDisplay': 'Mostrar no display agora',
+    'quotes.fetchNow': 'Atualizar agora',
     'quotes.cacheTitle': '&#218;ltimos dados',
     'quotes.noCache': 'Sem dados ainda &#8212; habilite o slot e aguarde o primeiro fetch',
     'quotes.cacheStale': '* Desatualizado &#8212; &#250;ltimo fetch falhou',
@@ -574,8 +595,9 @@ var I18N = {
     'status.connected': 'Conectado', 'status.noSync': 'Sem sync',
     'toast.saved': 'Salvo!', 'toast.error': 'Erro: ',
     'toast.networkError': 'Erro de rede',
-    'toast.alertSent': 'Alerta enviado!',
+    'toast.messageSent': 'Mensagem enviada!',
     'toast.previewSent': 'Enviado para o display!',
+    'toast.fetchQueued': 'Atualizando&#8230;',
     'toast.ssidEmpty': 'SSID não pode ser vazio',
     'toast.confirmRestart': 'Isso vai reiniciar o dispositivo. Continuar?',
     'toast.savedRestarting': 'Salvo! Reiniciando...'
@@ -605,7 +627,7 @@ function applyLang(lang) {
   });
   var sel = document.getElementById('ui-lang-select');
   if (sel) sel.value = currentLang;
-  if (typeof updateAlertPreview === 'function') updateAlertPreview();
+  if (typeof updateMessagePreview === 'function') updateMessagePreview();
 }
 
 // Populate the header language selector from the dictionaries available,
@@ -649,16 +671,16 @@ document.getElementById('cfg-scroll-speed').addEventListener('input', function()
   setText('speed-val', this.value);
   setText('speed-val-badge', this.value);
 });
-document.getElementById('alert-brightness').addEventListener('input', function() {
-  setText('alert-brightness-val', this.value);
-  setText('alert-brightness-val-badge', this.value);
+document.getElementById('message-brightness').addEventListener('input', function() {
+  setText('message-brightness-val', this.value);
+  setText('message-brightness-val-badge', this.value);
 });
-document.getElementById('alert-scroll-speed').addEventListener('input', function() {
-  setText('alert-speed-val', this.value);
-  setText('alert-speed-val-badge', this.value);
+document.getElementById('message-scroll-speed').addEventListener('input', function() {
+  setText('message-speed-val', this.value);
+  setText('message-speed-val-badge', this.value);
 });
-document.getElementById('alert-override-en').addEventListener('change', function() {
-  document.getElementById('alert-override-fields').style.display = this.checked ? '' : 'none';
+document.getElementById('message-override-en').addEventListener('change', function() {
+  document.getElementById('message-override-fields').style.display = this.checked ? '' : 'none';
 });
 
 // ── Date enabled toggle ───────────────────────────────────────────────────────
@@ -697,7 +719,7 @@ function loadConfig() {
   fetch('/api/config').then(function(r){ return r.json(); }).then(function(c) {
     applyLang(c.ui_language || 'en');
     loadTimezones(c.timezone);
-    setVal('cfg-language', c.language);
+    setVal('cfg-locale', c.locale);
     setVal('cfg-ntp-server', c.ntp_server);
     setVal('cfg-date-interval', Math.round((c.date_interval_ms || 30000) / 1000));
 
@@ -745,7 +767,6 @@ function pollStatus() {
 
     // Weather cache info
     var cacheEl = document.getElementById('weather-cache-info');
-    var previewBtn = document.getElementById('btn-preview-weather');
     if (cacheEl) {
       if (s.weather_cache_valid) {
         var staleNote = s.weather_cache_stale ? ' <span style="color:#e3b341">(' + t('weather.cacheStale') + ')</span>' : '';
@@ -754,14 +775,15 @@ function pollStatus() {
         cacheEl.textContent = t('weather.noCache');
       }
     }
-    if (previewBtn) {
-      previewBtn.disabled = !s.weather_cache_valid;
-      previewBtn.style.opacity = s.weather_cache_valid ? '1' : '0.4';
-    }
+    ['btn-preview-weather', 'btn-preview-weather-2'].forEach(function(id) {
+      var btn = document.getElementById(id);
+      if (!btn) return;
+      btn.disabled = !s.weather_cache_valid;
+      btn.style.opacity = s.weather_cache_valid ? '1' : '0.4';
+    });
 
     // Quotes cache info
     var qCacheEl = document.getElementById('quotes-cache-info');
-    var qPreviewBtn = document.getElementById('btn-preview-quotes');
     if (qCacheEl) {
       if (s.quotes_cache_valid) {
         var qStaleNote = s.quotes_cache_stale ? ' <span style="color:#e3b341">(' + t('quotes.cacheStale') + ')</span>' : '';
@@ -770,18 +792,20 @@ function pollStatus() {
         qCacheEl.textContent = t('quotes.noCache');
       }
     }
-    if (qPreviewBtn) {
-      qPreviewBtn.disabled = !s.quotes_cache_valid;
-      qPreviewBtn.style.opacity = s.quotes_cache_valid ? '1' : '0.4';
-    }
+    ['btn-preview-quotes', 'btn-preview-quotes-2'].forEach(function(id) {
+      var btn = document.getElementById(id);
+      if (!btn) return;
+      btn.disabled = !s.quotes_cache_valid;
+      btn.style.opacity = s.quotes_cache_valid ? '1' : '0.4';
+    });
   }).catch(function(){});
 }
 
-// ── Save clock config ────────────────────────────────────────────────────────
-document.getElementById('btn-save-clock').addEventListener('click', function() {
+// ── Save clock config (shared by the Display and Clock tabs) ──────────────────
+function saveClockConfig() {
   var body = {
     timezone: val('cfg-timezone'),
-    language: val('cfg-language'),
+    locale: val('cfg-locale'),
     ntp_server: val('cfg-ntp-server'),
     date_interval_ms: parseInt(val('cfg-date-interval'), 10) * 1000,
     date_enabled: checked('cfg-date-en'),
@@ -792,13 +816,15 @@ document.getElementById('btn-save-clock').addEventListener('click', function() {
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {
     showToast(r.ok ? t('toast.saved') : (t('toast.error') + (r.error || '?')));
   }).catch(function(){ showToast(t('toast.networkError')); });
-});
+}
+document.getElementById('btn-save-clock').addEventListener('click', saveClockConfig);
+document.getElementById('btn-save-clock-tz').addEventListener('click', saveClockConfig);
 
-// ── Alert icon tags ────────────────────────────────────────────────────────────
+// ── Message icon tags ────────────────────────────────────────────────────────────
 // Mirrors the firmware's icon table in text_encoding.cpp (expandIconTags()).
 // glyph = Unicode look-alike shown on the button and in the preview;
 // tag   = literal [name] inserted into the message text.
-var ALERT_ICONS = [
+var MESSAGE_ICONS = [
   { tag: 'heart',       glyph: '♥' },
   { tag: 'diamond',     glyph: '♦' },
   { tag: 'spade',       glyph: '♠' },
@@ -811,19 +837,19 @@ var ALERT_ICONS = [
   { tag: 'bell',        glyph: '▲' },
   { tag: 'warn',        glyph: '▼' }
 ];
-var ALERT_ICON_BY_TAG = {};
-ALERT_ICONS.forEach(function(i) { ALERT_ICON_BY_TAG[i.tag] = i.glyph; });
+var MESSAGE_ICON_BY_TAG = {};
+MESSAGE_ICONS.forEach(function(i) { MESSAGE_ICON_BY_TAG[i.tag] = i.glyph; });
 
-function populateAlertIcons() {
-  var row = document.getElementById('alert-icon-row');
-  ALERT_ICONS.forEach(function(icon) {
+function populateMessageIcons() {
+  var row = document.getElementById('message-icon-row');
+  MESSAGE_ICONS.forEach(function(icon) {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'icon-btn';
     btn.textContent = icon.glyph;
     btn.title = icon.tag;
     btn.addEventListener('click', function() {
-      var input = document.getElementById('alert-msg');
+      var input = document.getElementById('message-text');
       var tagText = '[' + icon.tag + ']';
       var start = input.selectionStart != null ? input.selectionStart : input.value.length;
       var end = input.selectionEnd != null ? input.selectionEnd : input.value.length;
@@ -831,7 +857,7 @@ function populateAlertIcons() {
       var caret = start + tagText.length;
       input.focus();
       input.setSelectionRange(caret, caret);
-      updateAlertPreview();
+      updateMessagePreview();
     });
     row.appendChild(btn);
   });
@@ -839,9 +865,9 @@ function populateAlertIcons() {
 
 // Resolve [name] tags to their preview glyph (or leave the literal tag if
 // unknown), same rule the firmware applies when resolving to CP437 bytes.
-function resolveAlertPreview(msg) {
+function resolveMessagePreview(msg) {
   return msg.replace(/\[([a-z_]+)\]/g, function(match, name) {
-    return ALERT_ICON_BY_TAG[name] !== undefined ? ALERT_ICON_BY_TAG[name] : match;
+    return MESSAGE_ICON_BY_TAG[name] !== undefined ? MESSAGE_ICON_BY_TAG[name] : match;
   });
 }
 
@@ -877,15 +903,15 @@ var ICON_GLYPH_WIDTH = {
 // is its own token. Keeps the tag-vs-rendered-width mapping correct so the
 // screen-fit calculation matches the firmware instead of measuring the
 // Unicode look-alike glyph used only for the on-screen preview.
-function tokenizeAlertMessage(msg) {
+function tokenizeMessageText(msg) {
   var tokens = [];
   var re = /\[([a-z_]+)\]/g;
   var lastIndex = 0, m;
   while ((m = re.exec(msg)) !== null) {
     for (var i = lastIndex; i < m.index; i++) tokens.push({ text: msg[i], width: charPixelWidth(msg[i]) });
     var name = m[1];
-    if (ALERT_ICON_BY_TAG[name] !== undefined) {
-      tokens.push({ text: ALERT_ICON_BY_TAG[name], width: ICON_GLYPH_WIDTH[name] !== undefined ? ICON_GLYPH_WIDTH[name] : 5 });
+    if (MESSAGE_ICON_BY_TAG[name] !== undefined) {
+      tokens.push({ text: MESSAGE_ICON_BY_TAG[name], width: ICON_GLYPH_WIDTH[name] !== undefined ? ICON_GLYPH_WIDTH[name] : 5 });
     } else {
       for (var j = 0; j < m[0].length; j++) tokens.push({ text: m[0][j], width: charPixelWidth(m[0][j]) });
     }
@@ -912,10 +938,10 @@ function tokensFittingOnScreen(tokens) {
   return count;
 }
 
-function updateAlertPreview() {
-  var msg = val('alert-msg');
-  var preview = document.getElementById('alert-preview');
-  var overflowEl = document.getElementById('alert-preview-overflow');
+function updateMessagePreview() {
+  var msg = val('message-text');
+  var preview = document.getElementById('message-preview');
+  var overflowEl = document.getElementById('message-preview-overflow');
 
   if (!msg) {
     preview.textContent = '\xa0';
@@ -923,7 +949,7 @@ function updateAlertPreview() {
     return;
   }
 
-  var tokens = tokenizeAlertMessage(msg);
+  var tokens = tokenizeMessageText(msg);
   var fitCount = tokensFittingOnScreen(tokens);
   var fits = fitCount >= tokens.length;
 
@@ -939,33 +965,33 @@ function updateAlertPreview() {
   }
 
   if (overflowEl) {
-    overflowEl.textContent = fits ? '' : t('alert.multiScreen');
+    overflowEl.textContent = fits ? '' : t('message.multiScreen');
   }
 }
 
-populateAlertIcons();
-document.getElementById('alert-msg').addEventListener('input', updateAlertPreview);
+populateMessageIcons();
+document.getElementById('message-text').addEventListener('input', updateMessagePreview);
 
-// ── Send alert ───────────────────────────────────────────────────────────────
-document.getElementById('btn-send-alert').addEventListener('click', function() {
-  var msg = val('alert-msg');
+// ── Send message ───────────────────────────────────────────────────────────────
+document.getElementById('btn-send-message').addEventListener('click', function() {
+  var msg = val('message-text');
   if (!msg) return;
-  var mode = parseInt(val('alert-mode'), 10);
-  var dur  = parseInt(val('alert-duration'), 10) * 1000;
+  var mode = parseInt(val('message-mode'), 10);
+  var dur  = parseInt(val('message-duration'), 10) * 1000;
   var body = { message: msg, mode: mode, duration_ms: dur };
-  if (document.getElementById('alert-override-en').checked) {
-    body.brightness = parseInt(val('alert-brightness'), 10);
-    body.scroll_speed_ms = parseInt(val('alert-scroll-speed'), 10);
+  if (document.getElementById('message-override-en').checked) {
+    body.brightness = parseInt(val('message-brightness'), 10);
+    body.scroll_speed_ms = parseInt(val('message-scroll-speed'), 10);
   }
-  fetch('/api/alert', {method:'POST', headers:{'Content-Type':'application/json'},
+  fetch('/api/message', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {
-    showToast(r.ok ? t('toast.alertSent') : (t('toast.error') + (r.error || '?')));
-    if (r.ok) loadAlertHistory();
+    showToast(r.ok ? t('toast.messageSent') : (t('toast.error') + (r.error || '?')));
+    if (r.ok) loadMessageHistory();
   }).catch(function(){ showToast(t('toast.networkError')); });
 });
 
-// ── Alert history ─────────────────────────────────────────────────────────────
-function formatAlertTimestamp(ts) {
+// ── Message history ─────────────────────────────────────────────────────────────
+function formatMessageTimestamp(ts) {
   if (!ts) return '';
   var d = new Date(ts * 1000);
   var pad = function(n) { return String(n).padStart(2, '0'); };
@@ -973,11 +999,11 @@ function formatAlertTimestamp(ts) {
          ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
 }
 
-function loadAlertHistory() {
-  fetch('/api/alerts/history').then(function(r){ return r.json(); }).then(function(entries) {
-    var container = document.getElementById('alert-history-list');
+function loadMessageHistory() {
+  fetch('/api/messages/history').then(function(r){ return r.json(); }).then(function(entries) {
+    var container = document.getElementById('message-history-list');
     if (!entries || entries.length === 0) {
-      container.innerHTML = '<div style="color:#8b949e;font-size:13px" data-i18n="alert.historyEmpty">' + t('alert.historyEmpty') + '</div>';
+      container.innerHTML = '<div style="color:#8b949e;font-size:13px" data-i18n="message.historyEmpty">' + t('message.historyEmpty') + '</div>';
       return;
     }
     container.innerHTML = '';
@@ -988,7 +1014,7 @@ function loadAlertHistory() {
       row.style.cssText = 'display:flex;gap:8px;align-items:baseline;border-bottom:1px solid #21262d;padding-bottom:4px;font-size:13px';
       var ts = document.createElement('span');
       ts.style.cssText = 'color:#8b949e;white-space:nowrap;font-family:monospace;flex-shrink:0';
-      ts.textContent = formatAlertTimestamp(e.timestamp);
+      ts.textContent = formatMessageTimestamp(e.timestamp);
       var msg = document.createElement('span');
       msg.style.cssText = 'color:#c9d1d9;word-break:break-word';
       msg.textContent = e.message;
@@ -999,10 +1025,10 @@ function loadAlertHistory() {
   }).catch(function() {});
 }
 
-// Load history on tab switch to Alert
+// Load history on tab switch to Message
 document.querySelectorAll('.tab').forEach(function(btn) {
   btn.addEventListener('click', function() {
-    if (btn.getAttribute('data-tab') === 'alert') loadAlertHistory();
+    if (btn.getAttribute('data-tab') === 'message') loadMessageHistory();
   });
 });
 
@@ -1017,7 +1043,7 @@ function runCitySearch() {
     return;
   }
   statusEl.textContent = t('weather.searching');
-  var lang = (document.getElementById('cfg-language') ? val('cfg-language') : 'en') || 'en';
+  var lang = (document.getElementById('cfg-locale') ? val('cfg-locale') : 'en') || 'en';
   var url = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
             encodeURIComponent(query) + '&count=5&language=' + encodeURIComponent(lang) + '&format=json';
   fetch(url).then(function(r) { return r.json(); }).then(function(data) {
@@ -1068,21 +1094,31 @@ document.getElementById('btn-save-weather').addEventListener('click', function()
   }).catch(function(){ showToast(t('toast.networkError')); });
 });
 
-// ── Preview weather on display ───────────────────────────────────────────────
-document.getElementById('btn-preview-weather').addEventListener('click', function() {
+// ── Preview weather/quotes on display (buttons duplicated on Display tab) ─────
+function previewSlot(slot) {
   fetch('/api/preview', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({slot: 2})}).then(function(r){ return r.json(); }).then(function(r) {
+    body: JSON.stringify({slot: slot})}).then(function(r){ return r.json(); }).then(function(r) {
     showToast(r.ok ? t('toast.previewSent') : (t('toast.error') + (r.error || '?')));
   }).catch(function(){ showToast(t('toast.networkError')); });
-});
+}
+document.getElementById('btn-preview-weather').addEventListener('click', function() { previewSlot(2); });
+document.getElementById('btn-preview-quotes').addEventListener('click', function() { previewSlot(3); });
+document.getElementById('btn-preview-weather-2').addEventListener('click', function() { previewSlot(2); });
+document.getElementById('btn-preview-quotes-2').addEventListener('click', function() { previewSlot(3); });
 
-// ── Preview quotes on display ────────────────────────────────────────────────
-document.getElementById('btn-preview-quotes').addEventListener('click', function() {
-  fetch('/api/preview', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({slot: 3})}).then(function(r){ return r.json(); }).then(function(r) {
-    showToast(r.ok ? t('toast.previewSent') : (t('toast.error') + (r.error || '?')));
+// ── Force-refresh weather/quotes data (bypasses the update interval) ──────────
+// Only queues the fetch — the device's next fetcherTick() (within a few
+// seconds) does the actual HTTP call and updates the cache; poll status
+// shortly after so the "Last data" card picks up the new value.
+function fetchSlot(slot) {
+  fetch('/api/fetch', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({slot: slot})}).then(function(r){ return r.json(); }).then(function(r) {
+    showToast(r.ok ? t('toast.fetchQueued') : (t('toast.error') + (r.error || '?')));
+    if (r.ok) setTimeout(pollStatus, 4000);
   }).catch(function(){ showToast(t('toast.networkError')); });
-});
+}
+document.getElementById('btn-fetch-weather').addEventListener('click', function() { fetchSlot(2); });
+document.getElementById('btn-fetch-quotes').addEventListener('click', function() { fetchSlot(3); });
 
 // ── Save quotes config ───────────────────────────────────────────────────────
 document.getElementById('btn-save-quotes').addEventListener('click', function() {

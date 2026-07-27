@@ -242,12 +242,12 @@ MD_MAX72XX::fontType_t PROGMEM _dateSmallFont[] =
   //      O O
   3, 62, 8, 54,
 
-  // 'S'  OOO    col0=14(top+r1+mid), col1=42(top+mid+bot), col2=56(mid+r3+bot)
+  // 'S'  OOO    col0=46(top+r1+mid+bot), col1=42(top+mid+bot), col2=58(top+mid+r3+bot)
   //      O
   //      OOO
   //        O
   //      OOO
-  3, 14, 42, 56,
+  3, 46, 42, 58,
 
   // 'T'  OOO    col0=2(top), col1=62, col2=2
   //       O

@@ -101,7 +101,7 @@ static void _fetchWeather() {
     float tmin    = doc["daily"]["temperature_2m_min"][0] | 0.0f;
 
     // Determine language for the condition string
-    uint8_t lang = (cfgLanguage[0] == 'p' || cfgLanguage[0] == 'P') ? LANG_PT : LANG_EN;
+    uint8_t lang = (cfgLocale[0] == 'p' || cfgLocale[0] == 'P') ? LANG_PT : LANG_EN;
     const char* cond = weatherConditionName(lang, (uint8_t)wmoCode);
 
     // Update cache
@@ -152,8 +152,14 @@ static uint8_t _splitTickers(char (*symbols)[QUOTES_SYMBOL_MAX]) {
 // Returns true and fills price/changePercent on success.
 static bool _fetchOneQuote(const char* symbol, float* price, float* changePercent) {
     char url[192];
+    // range=1d&interval=1d discards the historical timestamp/indicator series
+    // the chart endpoint returns by default — for volatile symbols like
+    // crypto/forex (e.g. BTC-USD, BRL=X) that series alone can be 80-90 KB,
+    // which either exhausts the ESP32's heap or gets silently truncated by
+    // HTTPClient, producing a JSON parse error ("IncompleteInput") even
+    // though only the small "meta" object (with regularMarketPrice) is used.
     snprintf(url, sizeof(url),
-        "https://query1.finance.yahoo.com/v8/finance/chart/%s", symbol);
+        "https://query1.finance.yahoo.com/v8/finance/chart/%s?range=1d&interval=1d", symbol);
 
     HTTPClient http;
     http.setTimeout(5000);   // 5 s timeout — hard rule from AGENTS.md

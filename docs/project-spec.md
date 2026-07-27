@@ -65,7 +65,7 @@ anchor between all other features.
 
 ---
 
-### 2.2 Alert Message
+### 2.2 Message
 
 **Purpose:** allow external systems or the user to send a one-off text
 message to the display, for point-in-time notifications (e.g., home
@@ -75,17 +75,17 @@ automation alerts, reminders).
 - Sent via REST API or web panel.
 - Upon receipt, it is queued for display — **never interrupts an ongoing
  scroll** to avoid visual corruption.
-- As soon as the current scroll finishes, the alert message is displayed
+- As soon as the current scroll finishes, the message is displayed
  in a full scroll, exactly once.
 - Once the scroll completes, the message is **automatically discarded** —
  it does not enter the periodic rotation and is not kept for
  re-display.
 - The display returns to the clock (or the next rotation slot) as soon as
- the alert scroll finishes.
+ the message scroll finishes.
 
-**Concurrency:** if multiple alerts arrive in sequence before being
+**Concurrency:** if multiple messages arrive in sequence before being
 displayed, only the most recent is kept — previously received but
-not-yet-displayed alerts are discarded.
+not-yet-displayed messages are discarded.
 
 **Configuration:**
 - Message scroll speed: configurable per call parameter or via the global
@@ -249,7 +249,7 @@ giant sketch. One viable breakdown (the one used in this project):
  - `GET /api/display` — the single REST endpoint that reads query
    parameters to set the message text, scroll speed, brightness, display
    submode, main mode, timezone, date on/off, date interval, and a single
-   "alert" message.
+   "message" text.
  - A pair of settings routes (`GET`/`POST`) for the web interface to
    read/write the same parameters, sharing validation logic with the
    REST endpoint instead of duplicating it.
@@ -268,7 +268,7 @@ giant sketch. One viable breakdown (the one used in this project):
  phone/laptop without needing the original network. Saving new
  credentials in that AP schedules a deferred restart for the device to
  reconnect as a station.
-- **Main loop**: check WiFi/HTTP server; check the "alert message pending"
+- **Main loop**: check WiFi/HTTP server; check the "message pending"
  flag (set by the HTTP layer, queued by the display layer); check the
  external-data-fetch timers (Weather and Quotes) and fire HTTP requests
  when needed; advance the slot rotation manager (active-slot switch
@@ -308,12 +308,12 @@ Once the firmware exists, document (in files separate from this one):
 Keep the first implementation lean — these are natural evolutions, not
 day-one requirements:
 
-The v1 slots are: **Clock** (base mode), **Alert Message**, **Weather**
+The v1 slots are: **Clock** (base mode), **Message**, **Weather**
 (Open-Meteo), and **Quotes** (Yahoo Finance). The following is explicitly
 out of scope for the first version:
 
 - Additional display slots beyond the four above.
-- Multiple queued alerts (v1 keeps only the most recent).
+- Multiple queued messages (v1 keeps only the most recent).
 - Any authentication on any endpoint.
 - OTA firmware updates or browser-based flashing (can be added later).
 - Time-of-day slot scheduling (e.g., showing quotes only during market

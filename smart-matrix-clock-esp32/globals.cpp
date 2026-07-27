@@ -16,27 +16,27 @@ uint16_t scrollSpeed        = DEFAULT_SCROLL_SPEED_MS;
 // ─── NTP / time ───────────────────────────────────────────────────────────────
 bool ntpSynced = false;
 
-// ─── Alert message ────────────────────────────────────────────────────────────
-bool alertPending    = false;
-char alertMessage[MAX_ALERT_LEN] = {0};
-uint8_t  alertMode       = ALERT_MODE_SCROLL;
-uint32_t alertDurationMs = ALERT_DURATION_DEFAULT_MS;
-int16_t  alertBrightness    = -1;   // -1 = no override, use currentBrightness
-int32_t  alertScrollSpeedMs = -1;   // -1 = no override, use scrollSpeed
+// ─── Message ──────────────────────────────────────────────────────────────────
+bool messagePending    = false;
+char messageText[MAX_MESSAGE_LEN] = {0};
+uint8_t  messageMode       = MESSAGE_MODE_SCROLL;
+uint32_t messageDurationMs = MESSAGE_DURATION_DEFAULT_MS;
+int16_t  messageBrightness    = -1;   // -1 = no override, use currentBrightness
+int32_t  messageScrollSpeedMs = -1;   // -1 = no override, use scrollSpeed
 
-// ─── Alert history ────────────────────────────────────────────────────────────
-AlertHistoryEntry alertHistory[ALERT_HISTORY_SIZE];
-uint8_t  alertHistoryCount = 0;
-uint8_t  alertHistoryHead  = 0;
+// ─── Message history ──────────────────────────────────────────────────────────
+MessageHistoryEntry messageHistory[MESSAGE_HISTORY_SIZE];
+uint8_t  messageHistoryCount = 0;
+uint8_t  messageHistoryHead  = 0;
 
 // ─── Slot rotation ────────────────────────────────────────────────────────────
 uint8_t  activeSlot        = 0;
-bool     slotEnabled[4]    = { true, false, false, false };   // [clock, alert, weather, quotes]
+bool     slotEnabled[4]    = { true, false, false, false };   // [clock, message, weather, quotes]
 uint32_t slotIntervalMs[4] = { 0, 0, 60000, 120000 };         // clock = base (no interval)
 
 // ─── Persistent configuration ─────────────────────────────────────────────────
 char     cfgTimezone[NTP_TIMEZONE_MAX]  = NTP_TIMEZONE_DEFAULT;
-char     cfgLanguage[LANG_CODE_MAX]     = LANG_DEFAULT;
+char     cfgLocale[LOCALE_CODE_MAX]     = LOCALE_DEFAULT;
 char     cfgNtpServer[NTP_SERVER_MAX]   = NTP_SERVER_DEFAULT;
 char     cfgWifiSsid[WIFI_SSID_MAX]     = {0};
 char     cfgWifiPass[WIFI_PASS_MAX]     = {0};

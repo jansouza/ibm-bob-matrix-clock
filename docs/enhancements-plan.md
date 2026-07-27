@@ -10,12 +10,37 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 
 ---
 
+## Status summary
+
+### Implemented
+
+| Sub-task | Feature |
+|---|---|
+| Sub-Task 2 | Icons/symbols in messages (`[heart]`, `[star]`, `[warn]`, etc.) |
+| Sub-Task 4 | Web interface language (EN/PT, persisted on device) |
+| Sub-Task 6a | Live message preview (icon tags resolved in browser before sending) |
+| Sub-Task 6d | Message history (`GET /api/messages/history`, last 20 messages) |
+
+### Pending
+
+| Sub-task | Feature | Urgency |
+|---|---|---|
+| Sub-Task 1 | Configurable HH:MM:SS clock mode | 🔴 High |
+| Sub-Task 3 | Web interface password (HTTP Basic Auth) | 🟢 Low |
+| Sub-Task 5 | WiFi network scan (`GET /api/wifi/scan`) | 🟢 Low |
+| Sub-Task 6b | Automatic brightness by time of day | 🟡 Medium |
+| Sub-Task 6c | OTA firmware update (`POST /api/ota`) | 🟡 Medium |
+| Sub-Task 6e | Slot scheduling by time of day | 🟡 Medium |
+| Sub-Task 6f | Soft reboot via panel (`POST /api/restart`) | 🟡 Medium |
+
+---
+
 ## Priorities
 
 | # | Feature | Urgency |
 |---|---|---|
 | F1 | Seconds clock mode (HH:MM:SS) | 🔴 High |
-| F2 | Icons/symbols in alert messages | 🟡 Medium |
+| F2 | Icons/symbols in messages | 🟡 Medium |
 | F3 | Password for the web interface (HTTP Basic Auth) | 🟢 Low |
 | F4 | Web interface language (pt/en in browser) | 🟢 Low |
 | F5 | WiFi network scan in the web interface | 🟢 Low |
@@ -63,7 +88,7 @@ The display has 32 columns (4 FC16 modules × 8 columns). The approach of mixing
    - Helper function `_writeSmallDigit(uint8_t startCol, char digit)` that iterates `_dateSmallFont` in PROGMEM to locate the digit glyph offset and writes each column via `_display.getGraphicObject()->setColumn()`.
    - Function `_renderHHMMSS(struct tm& t, bool colonVisible)`: calls `_display.setFont(nullptr)`, `setTextAlignment(PA_LEFT)`, `print("HH:MM" or "HH MM")` as in the current mode; then calls `_writeSmallDigit` for the two digits of `t.tm_sec` at columns `SS_COL_START` and `SS_COL_START + 4`.
    - In the colon blink block (line 234): at the end, if `cfgClockMode == CLOCK_MODE_HHMMSS`, call `_renderHHMMSS()` instead of the normal (centred) `print()`. Separately check if the second changed (1 s timer) to update only the `SS` digits without redrawing `HH:MM`.
-   - When leaving `CLOCK_MODE_HHMMSS` (config change, date, alert): call `_display.setTextAlignment(PA_CENTER)` and clear `_lastTimeStr`.
+   - When leaving `CLOCK_MODE_HHMMSS` (config change, date, message): call `_display.setTextAlignment(PA_CENTER)` and clear `_lastTimeStr`.
 5. **`web_routes.cpp`** — In `POST /api/config`, accept field `clock_mode` (0 or 1), validate, save, apply (update `cfgClockMode`, force redraw by clearing `_lastTimeStr` via `displayForceRedraw()`).
 6. **`display.h/cpp`** — Expose `void displayForceRedraw()` that clears `_lastTimeStr[0] = '\0'` to ensure the next `displayTick()` call redraws from scratch.
 7. **`web_page.h`** — In the Clock tab, add a "Show seconds" toggle that reads `clock_mode` from `GET /api/config` and writes it via `POST /api/config`. Live preview should show simulated `:SS` when active.
@@ -79,13 +104,13 @@ The display has 32 columns (4 FC16 modules × 8 columns). The approach of mixing
 
 ---
 
-## Sub-Task 2 — Icons/symbols in alert messages (Medium urgency)
+## Sub-Task 2 — Icons/symbols in messages (Medium urgency)
 
 **Status:** `[x] done`
 
 ### Intent
 
-Allow alert text to contain tags like `[heart]`, `[star]`, `[smile]` that are replaced by CP437 special character bytes (already present in the MD_MAX72XX default font) before rendering. The web interface displays a panel of symbol buttons that automatically insert tags into the alert text field.
+Allow message text to contain tags like `[heart]`, `[star]`, `[smile]` that are replaced by CP437 special character bytes (already present in the MD_MAX72XX default font) before rendering. The web interface displays a panel of symbol buttons that automatically insert tags into the message text field.
 
 CP437 characters are mapped to MD_MAX72XX font indices (control characters 0x01–0x1F that the driver renders as special glyphs). No font or driver modifications are required.
 
@@ -93,22 +118,22 @@ CP437 characters are mapped to MD_MAX72XX font indices (control characters 0x01�
 
 - A list of ~10 common icons available (heart, star, smile, arrow, bell, etc.) with mappings to CP437 bytes.
 - Text `"Warning [bell] test"` arrives at the API as a string, and before being passed to the display it is processed to replace `[bell]` with the corresponding byte.
-- The Alert tab in the web UI displays a row of buttons with icons (using equivalent Unicode characters as visual labels) that insert tags into the text field.
+- The Message tab in the web UI displays a row of buttons with icons (using equivalent Unicode characters as visual labels) that insert tags into the text field.
 - The API documentation lists the supported icon names.
 
 ### Todo List
 
 1. **`text_encoding.h/cpp`** — Add function `expandIconTags(const char* src, char* dst, size_t maxLen)` that scans the string looking for `[name]` patterns and replaces them with the mapped CP437 byte. Mapping defined in a static internal table (name → byte).
    - Initial icons: `heart`→0x03, `diamond`→0x04, `club`→0x05, `spade`→0x06, `bullet`→0x07, `smile`→0x01, `star`→0x0F, `arrow_right`→0x10, `arrow_left`→0x11, `bell`→0x0D, `note`→0x0E.
-2. **`web_routes.cpp`** — In the `POST /api/alert` handler, after `utf8ToLatin1()`, call `expandIconTags()` before copying to `alertMessage[]`.
-3. **`web_page.h`** — In the Alert tab, add a row of icon buttons below the text field. Each button displays the corresponding Unicode glyph (e.g.: ♥ ★ ☺) and on click inserts the tag `[heart]` etc. into the text field at the cursor position.
+2. **`web_routes.cpp`** — In the `POST /api/message` handler, after `utf8ToLatin1()`, call `expandIconTags()` before copying to `messageText[]`.
+3. **`web_page.h`** — In the Message tab, add a row of icon buttons below the text field. Each button displays the corresponding Unicode glyph (e.g.: ♥ ★ ☺) and on click inserts the tag `[heart]` etc. into the text field at the cursor position.
 4. **`docs/api-rest.md`** — Document the list of supported icon tags and their glyphs.
 
 ### Relevant Context
 
 - [`smart-matrix-clock-esp32/text_encoding.h/cpp`](smart-matrix-clock-esp32/text_encoding.h) — natural location for the tag expansion function; pipeline already passes through `utf8ToLatin1()`.
-- [`smart-matrix-clock-esp32/web_routes.cpp`](smart-matrix-clock-esp32/web_routes.cpp) — `POST /api/alert` handler where the expansion must be inserted.
-- [`smart-matrix-clock-esp32/web_page.h`](smart-matrix-clock-esp32/web_page.h) — Alert tab in the web UI.
+- [`smart-matrix-clock-esp32/web_routes.cpp`](smart-matrix-clock-esp32/web_routes.cpp) — `POST /api/message` handler where the expansion must be inserted.
+- [`smart-matrix-clock-esp32/web_page.h`](smart-matrix-clock-esp32/web_page.h) — Message tab in the web UI.
 - CP437 character set: bytes 0x01–0x1F are special glyphs (smile, suit symbols, etc.).
 
 ---
@@ -123,7 +148,7 @@ Protect access to the web interface with HTTP Basic Auth. The user configures a 
 
 ### Design lesson from the removed API-key attempt
 
-A previous attempt at this used a custom `X-API-Key` header (`cfgApiAuthEnabled` / `cfgApiKey`, checked via `_checkApiKey()` in `web_routes.cpp`). It was implemented and later **removed** because the built-in web panel's own JavaScript never attached the header on any of its `fetch()` calls — as soon as a user enabled auth from the panel's own toggle, every subsequent POST from the panel itself (including that same toggle's save button, and "Send alert") started returning `401 Unauthorized`, locking the panel out of itself. There was also no place in the UI to persist the key for reuse (it was only shown once, on demand, for copying into external tools like `curl`).
+A previous attempt at this used a custom `X-API-Key` header (`cfgApiAuthEnabled` / `cfgApiKey`, checked via `_checkApiKey()` in `web_routes.cpp`). It was implemented and later **removed** because the built-in web panel's own JavaScript never attached the header on any of its `fetch()` calls — as soon as a user enabled auth from the panel's own toggle, every subsequent POST from the panel itself (including that same toggle's save button, and "Send message") started returning `401 Unauthorized`, locking the panel out of itself. There was also no place in the UI to persist the key for reuse (it was only shown once, on demand, for copying into external tools like `curl`).
 
 **Takeaway for this sub-task:** any new auth mechanism must cover the web panel's own requests, not just external/programmatic callers. HTTP Basic Auth sidesteps the original failure mode because the browser itself caches and resends the `Authorization` header automatically once the user enters credentials in the native prompt — no JS-side header plumbing is required. Do not reintroduce a custom header scheme without also wiring the panel's `fetch()` calls to send it.
 
@@ -144,7 +169,7 @@ A previous attempt at this used a custom `X-API-Key` header (`cfgApiAuthEnabled`
    - Decodes the `Authorization: Basic <b64>` header.
    - Compares with `cfgWebPassword` (username ignored or fixed `admin`).
    - Returns `true` if authorised or if `cfgWebAuthEnabled == false`.
-   - On routes `GET /`, `GET /api/config`, `POST /api/config`, `POST /api/alert`, `GET /api/status`, `POST /api/wifi`: call `_checkBasicAuth()` at the start; if false, respond 401.
+   - On routes `GET /`, `GET /api/config`, `POST /api/config`, `POST /api/message`, `GET /api/status`, `POST /api/wifi`: call `_checkBasicAuth()` at the start; if false, respond 401.
 5. **`web_page.h`** — In a new Security tab, add a "Protect web interface" toggle and password field; reads/writes via `POST /api/config` with fields `web_auth_enabled` and `web_password`.
 
 ### Relevant Context
@@ -241,10 +266,10 @@ Incorporate the following improvements into the product roadmap, all compatible 
 
 | # | Improvement | Rationale |
 |---|---|---|
-| 6a `[x] done` | **Live alert preview** | The current preview in the Clock tab simulates the display. Add a preview in the Alert tab that shows the formatted text (with resolved icons) before sending |
+| 6a `[x] done` | **Live message preview** | The current preview in the Clock tab simulates the display. Add a preview in the Message tab that shows the formatted text (with resolved icons) before sending |
 | 6b | **Automatic brightness by time of day** | Automatically reduce brightness at night (e.g.: 23h–7h) to avoid disturbance. Configurable: start/end time and night brightness level |
 | 6c | **OTA (Over-The-Air) firmware update** | `POST /api/ota` endpoint accepts a `.bin` file, writes via ESP32 `Update.h`. Reduces the need for a USB cable for updates |
-| 6d | **Alert history** | Maintain a ring buffer of the last N received alerts (timestamp + text). Exposed via `GET /api/alerts/history`. Useful for debugging and auditing |
+| 6d `[x] done` | **Message history** | Maintain a ring buffer of the last N received messages (timestamp + text). Exposed via `GET /api/messages/history`. Useful for debugging and auditing |
 | 6e | **Slot scheduling by time of day** | Configure time windows in which a slot is displayed (e.g.: quotes only 9h–18h on weekdays). Requires only one extra field per slot and a check in `slotRotationTick()` |
 | 6f | **Soft reboot via panel** | "Restart device" button in the Network/API tab that calls `POST /api/restart`; triggers `scheduleRestart(1500)`. Useful after complex configuration changes |
 
@@ -252,10 +277,10 @@ Incorporate the following improvements into the product roadmap, all compatible 
 
 Each item 6a–6f should be treated as an independent sub-task when approved for implementation:
 
-- **6a** — Modify only `web_page.h`: add a preview div in the Alert tab with JavaScript tag-resolution logic.
+- **6a** — Modify only `web_page.h`: add a preview div in the Message tab with JavaScript tag-resolution logic.
 - **6b** — `config.h` (constants), `globals.h/cpp` (cfgNightBrightnessEnabled, cfgNightStart, cfgNightEnd, cfgNightBrightness), `persistence.cpp`, `display.cpp` (check in `displayTick()`), `web_page.h` (controls in Clock tab), `web_routes.cpp`.
 - **6c** — `web_routes.cpp` (OTA endpoint with `Update.h`), `web_page.h` (upload button in API tab or new tab).
-- **6d** — `globals.h/cpp` (alert ring buffer), `web_routes.cpp` (`GET /api/alerts/history`), `web_page.h` (display in Alert tab).
+- **6d** — `globals.h/cpp` (message ring buffer), `web_routes.cpp` (`GET /api/messages/history`), `web_page.h` (display in Message tab).
 - **6e** — `config.h` (scheduling fields), `globals.h/cpp`, `persistence.cpp`, `display.cpp` (`slotRotationTick()`), `web_page.h`, `web_routes.cpp`.
 - **6f** — `web_routes.cpp` (`POST /api/restart` calling `scheduleRestart(1500)`), `web_page.h` (button in Network tab).
 

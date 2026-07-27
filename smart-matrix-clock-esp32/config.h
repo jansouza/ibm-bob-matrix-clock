@@ -25,7 +25,7 @@
 #define DEFAULT_SCROLL_SPEED_MS  70   // ms per scroll frame (10–200)
 
 // ─── Text buffer ──────────────────────────────────────────────────────────────
-#define MAX_ALERT_LEN  128   // max chars for alert message (incl. null)
+#define MAX_MESSAGE_LEN  128   // max chars for message (incl. null)
 #define SCROLL_BUF_LEN 256   // internal scroll working buffer
 
 // ─── WiFi ─────────────────────────────────────────────────────────────────────
@@ -51,14 +51,17 @@
 #define BLINK_INTERVAL_MS      500   // colon blink period (ms)
 #define AP_SCROLL_SPEED_MS     80    // slower scroll speed for AP config message (ms/frame)
 
-// ─── Locale ───────────────────────────────────────────────────────────────────
-#define LANG_CODE_MAX   4    // "pt\0" or "en\0"
-#define LANG_DEFAULT    "en"
+// ─── Content locale ─────────────────────────────────────────────────────────────
+// Governs everything content-related: date weekday/month names, the quote
+// search language sent to Yahoo Finance, and number formatting (thousands/
+// decimal separators). See cfgLocale in globals.h.
+#define LOCALE_CODE_MAX   4    // "pt\0" or "en\0"
+#define LOCALE_DEFAULT    "en"
 
 // ─── Web UI language ───────────────────────────────────────────────────────────
-// Separate from LANG_DEFAULT/cfgLanguage above, which only controls the
-// on-device clock/date weekday-month locale. This controls the web panel's
-// own interface language and is independent of the display's language.
+// Separate from LOCALE_DEFAULT/cfgLocale above, which only controls the
+// on-device clock/date/number/quote-search locale. This controls the web
+// panel's own interface language and is independent of the display's locale.
 // The list of accepted codes lives in persistence.cpp (isUiLanguageValid()) —
 // add a new entry there (and a matching I18N dictionary in web_page.cpp)
 // to support another language, no other branching logic needed.
@@ -70,16 +73,16 @@
 #define DATE_INTERVAL_MIN_MS       5000UL   // minimum 5 s
 #define DATE_INTERVAL_MAX_MS     300000UL   // maximum 5 min
 
-// ─── Alert display mode ───────────────────────────────────────────────────────
-#define ALERT_MODE_SCROLL       0   // scroll text left (original behaviour)
-#define ALERT_MODE_BLINK        1   // blink text on/off for alertDurationMs
-#define ALERT_MODE_STATIC       2   // show text static for alertDurationMs
-#define ALERT_MODE_BLINK_SCROLL 3   // blink first screen, then scroll remainder, repeating the cycle; alertDurationMs is the TOTAL for the whole repeating cycle
+// ─── Message display mode ──────────────────────────────────────────────────────
+#define MESSAGE_MODE_SCROLL       0   // scroll text left (original behaviour)
+#define MESSAGE_MODE_BLINK        1   // blink text on/off for messageDurationMs
+#define MESSAGE_MODE_STATIC       2   // show text static for messageDurationMs
+#define MESSAGE_MODE_BLINK_SCROLL 3   // blink first screen, then scroll remainder, repeating the cycle; messageDurationMs is the TOTAL for the whole repeating cycle
 
-#define ALERT_DURATION_DEFAULT_MS  5000UL   // default static/blink duration (ms)
-#define ALERT_HISTORY_SIZE         20       // ring buffer capacity (number of entries)
-#define ALERT_BLINK_PERIOD_MS       500     // blink toggle period (ms)
-#define ALERT_BLINK_SCROLL_PHASE1_MS 5000UL // fixed phase-1 (blink) duration for ALERT_MODE_BLINK_SCROLL (ms)
+#define MESSAGE_DURATION_DEFAULT_MS  5000UL   // default static/blink duration (ms)
+#define MESSAGE_HISTORY_SIZE         20       // ring buffer capacity (number of entries)
+#define MESSAGE_BLINK_PERIOD_MS       500     // blink toggle period (ms)
+#define MESSAGE_BLINK_SCROLL_PHASE1_MS 5000UL // fixed phase-1 (blink) duration for MESSAGE_MODE_BLINK_SCROLL (ms)
 
 // ─── NVS namespace and keys ───────────────────────────────────────────────────
 #define NVS_NAMESPACE       "clk"
@@ -87,7 +90,7 @@
 #define NVS_KEY_BRIGHTNESS  "brightness"
 #define NVS_KEY_SCROLL_SPD  "scroll_spd"
 #define NVS_KEY_TIMEZONE    "timezone"
-#define NVS_KEY_LANGUAGE    "language"
+#define NVS_KEY_LOCALE      "locale"
 #define NVS_KEY_NTP_SERVER  "ntp_server"
 #define NVS_KEY_WIFI_SSID   "wifi_ssid"
 #define NVS_KEY_WIFI_PASS   "wifi_pass"
@@ -99,8 +102,8 @@
 #define NVS_KEY_SLOT3_MS    "slot3_ms"
 #define NVS_KEY_DATE_INT_MS "date_int_ms"
 #define NVS_KEY_DATE_EN     "date_en"
-#define NVS_KEY_ALERT_MODE  "alert_mode"
-#define NVS_KEY_ALERT_DUR   "alert_dur"
+#define NVS_KEY_MESSAGE_MODE "msg_mode"
+#define NVS_KEY_MESSAGE_DUR  "msg_dur"
 #define NVS_KEY_UI_LANGUAGE "ui_lang"
 
 // ─── Restart ──────────────────────────────────────────────────────────────────

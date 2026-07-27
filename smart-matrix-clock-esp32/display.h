@@ -14,7 +14,7 @@
 void displayBegin();
 
 // Called every loop() iteration.
-// Manages colon blink, date scroll timer, alert queue, and non-blocking scroll.
+// Manages colon blink, date scroll timer, message queue, and non-blocking scroll.
 void displayTick();
 
 // Change display brightness at runtime (0–15).

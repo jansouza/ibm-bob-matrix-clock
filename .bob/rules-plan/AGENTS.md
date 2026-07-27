@@ -20,7 +20,7 @@ All 5 phases are complete:
 ```
 Phase 1 (clock, NTP, display)            ✓ Done
 Phase 2 (persistence, WiFi AP, boot)     ✓ Done
-Phase 3 (web UI, REST API, date/alert)   ✓ Done
+Phase 3 (web UI, REST API, date/message)   ✓ Done
 Phase 4 (weather slot — Open-Meteo)      ✓ Done
 Phase 5 (quotes slot — Yahoo Finance)    ✓ Done
 ```
@@ -35,7 +35,7 @@ Source lives in `smart-matrix-clock-esp32/` subdirectory. Two build systems are 
 ## Slot Model
 
 - Slot 0 = clock (permanent base, never skipped, `slotIntervalMs[0] = 0`)
-- Slot 1 = alert (one-shot, `slotIntervalMs[1] = 0`, consumed and cleared after one scroll)
+- Slot 1 = message (one-shot, `slotIntervalMs[1] = 0`, consumed and cleared after one scroll)
 - Slot 2 = weather (`slotIntervalMs[2]` configurable, runtime default from `globals.cpp`: 60 s)
 - Slot 3 = quotes (`slotIntervalMs[3]` configurable, runtime default from `globals.cpp`: 120 s)
 - Disabled slots → silently skipped with no wait

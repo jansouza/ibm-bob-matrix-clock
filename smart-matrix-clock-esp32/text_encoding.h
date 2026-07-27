@@ -24,3 +24,9 @@ char* latin1ToUtf8(const char* src, char* dst, size_t maxLen);
 // directly by MD_MAX72XX's default font). Unknown tags are copied through
 // verbatim, brackets included. dst is always null-terminated. Returns dst.
 char* expandIconTags(const char* src, char* dst, size_t maxLen);
+
+// Format a price with 2 fixed decimals, using locale-appropriate separators:
+// "pt" -> '.' thousands / ',' decimal (e.g. 1234.5 -> "1.234,50")
+// anything else (default "en") -> ',' thousands / '.' decimal (e.g. "1,234.50")
+// Negative values are supported. dst is always null-terminated. Returns dst.
+char* formatQuotePrice(float value, const char* locale, char* dst, size_t maxLen);

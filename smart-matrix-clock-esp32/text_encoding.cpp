@@ -9,6 +9,7 @@
 #include "text_encoding.h"
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 // ─── UTF-8 → Latin-1 ──────────────────────────────────────────────────────────
 // Decodes each UTF-8 sequence to its Unicode code-point, then maps to Latin-1.
@@ -111,6 +112,47 @@ char* expandIconTags(const char* src, char* dst, size_t maxLen) {
             }
         }
         dst[out++] = *s++;
+    }
+
+    dst[out] = '\0';
+    return dst;
+}
+
+// ─── Quote price formatting ───────────────────────────────────────────────────
+
+char* formatQuotePrice(float value, const char* locale, char* dst, size_t maxLen) {
+    if (!dst || maxLen == 0) return dst;
+
+    bool isPt = locale && (locale[0] == 'p' || locale[0] == 'P');
+    char thousandsSep = isPt ? '.' : ',';
+    char decimalSep   = isPt ? ',' : '.';
+
+    bool neg = value < 0;
+    char plain[24];
+    snprintf(plain, sizeof(plain), "%.2f", neg ? -value : value);
+
+    // Split into integer and decimal parts at the '.'.
+    char* dot = strchr(plain, '.');
+    size_t intLen = dot ? (size_t)(dot - plain) : strlen(plain);
+
+    size_t out = 0;
+    if (neg && out < maxLen - 1) dst[out++] = '-';
+
+    // Insert thousandsSep every 3 digits from the right of the integer part.
+    size_t firstGroup = intLen % 3;
+    if (firstGroup == 0) firstGroup = 3;
+    size_t i = 0;
+    while (i < intLen && out < maxLen - 1) {
+        if (i > 0 && (i - firstGroup) % 3 == 0 && i >= firstGroup) {
+            dst[out++] = thousandsSep;
+            if (out >= maxLen - 1) break;
+        }
+        dst[out++] = plain[i++];
+    }
+
+    if (dot && out < maxLen - 1) {
+        dst[out++] = decimalSep;
+        for (const char* p = dot + 1; *p && out < maxLen - 1; p++) dst[out++] = *p;
     }
 
     dst[out] = '\0';

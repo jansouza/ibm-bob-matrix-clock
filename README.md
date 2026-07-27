@@ -15,7 +15,7 @@ Arduino/ESP32 firmware for a MAX7219 LED matrix clock with WiFi, web panel and R
 | Slot | Description |
 |---|---|
 | 🕐 **Clock** | Continuous base mode — `HH:MM` with blinking colon, date in periodic scroll |
-| 🔔 **Alert** | One-off message sent via REST API or web panel, displayed once then discarded |
+| 🔔 **Message** | One-off message sent via REST API or web panel, displayed once then discarded |
 | 🌤️ **Weather** | Temperature, condition and min/max of the day via [Open-Meteo](https://open-meteo.com/) (no API key required). The web panel includes a city/postal-code search (Open-Meteo Geocoding API) to set latitude/longitude without typing coordinates manually |
 | 📈 **Quotes** | Price and percentage change of configurable assets via Yahoo Finance |
 
@@ -31,9 +31,9 @@ Arduino/ESP32 firmware for a MAX7219 LED matrix clock with WiFi, web panel and R
 
 ## Screenshots
 
-| Clock | Alert |
+| Clock | Message |
 |---|---|
-| ![Clock slot](assets/screenshot_clock.png) | ![Alert slot](assets/screenshot_alert.png) |
+| ![Clock slot](assets/screenshot_clock.png) | ![Message slot](assets/screenshot_message.png) |
 
 | Weather | Quotes |
 |---|---|
@@ -125,13 +125,13 @@ No authentication is required on any endpoint in this version — anyone on the 
 | `GET` | `/api/config` | All current settings (JSON) |
 | `GET` | `/api/timezones` | List of available IANA timezones |
 | `POST` | `/api/config` | Update settings |
-| `POST` | `/api/alert` | Send an alert message to the display |
+| `POST` | `/api/message` | Send a message to the display |
 | `POST` | `/api/wifi` | Save new WiFi credentials and reboot |
 | `POST` | `/api/preview` | Force-show a slot on the display immediately |
 
-**Example — send alert:**
+**Example — send message:**
 ```bash
-curl -X POST http://<ip>/api/alert \
+curl -X POST http://<ip>/api/message \
   -H "Content-Type: application/json" \
   -d '{"message": "Deploy complete!"}'
 ```
@@ -148,7 +148,7 @@ The firmware was developed in **5 incremental phases**, each delivering a functi
 |---|---|---|
 | 1 | Project skeleton + functional clock (NTP, blink) | ✅ Done |
 | 2 | NVS persistence + configurable WiFi + setup AP | ✅ Done |
-| 3 | Web interface + REST API + full clock (date, alert) | ✅ Done |
+| 3 | Web interface + REST API + full clock (date, message) | ✅ Done |
 | 4 | Weather slot (Open-Meteo) + slot rotation | ✅ Done |
 | 5 | Quotes slot (Yahoo Finance) | ✅ Done |
 
@@ -161,14 +161,14 @@ Beyond the 5 core phases, [`docs/enhancements-plan.md`](docs/enhancements-plan.m
 | # | Feature | Status |
 |---|---|---|
 | F1 | Seconds clock mode (`HH:MM:SS`) | 🔲 Pending |
-| F2 | Icons/symbols in alert messages | ✅ Done |
+| F2 | Icons/symbols in messages | ✅ Done |
 | F3 | Password for the web interface (HTTP Basic Auth) | 🔲 Pending |
 | F4 | Web interface language (pt/en in browser) | ✅ Done |
 | F5 | WiFi network scan in the web interface | 🔲 Pending |
-| F6a | Live alert preview | ✅ Done |
+| F6a | Live message preview | ✅ Done |
 | F6b | Automatic brightness by time of day | 🔲 Pending |
 | F6c | OTA firmware update | 🔲 Pending |
-| F6d | Alert history | 🔲 Pending |
+| F6d | Message history | 🔲 Pending |
 | F6e | Slot scheduling by time of day | 🔲 Pending |
 | F6f | Soft reboot via panel | 🔲 Pending |
 
