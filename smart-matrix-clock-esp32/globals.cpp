@@ -54,6 +54,12 @@ bool     cfgDateEnabled                 = true;
 char     cfgUiLanguage[UI_LANG_CODE_MAX] = UI_LANG_DEFAULT;
 uint8_t  cfgClockMode                   = CLOCK_MODE_DEFAULT;
 
+// ─── Auto brightness by time of day (Sub-Task 6b) ─────────────────────────────
+bool     cfgNightBrightnessEnabled = DEFAULT_NIGHT_BRIGHTNESS_ENABLED;
+uint8_t  cfgNightBrightnessLevel   = DEFAULT_NIGHT_BRIGHTNESS_LEVEL;
+uint16_t cfgNightStartMin          = DEFAULT_NIGHT_START_MIN;
+uint16_t cfgNightEndMin            = DEFAULT_NIGHT_END_MIN;
+
 // ─── Weather configuration (Phase 4) ──────────────────────────────────────────
 float    cfgWeatherLat     = WEATHER_LAT_DEFAULT;
 float    cfgWeatherLon     = WEATHER_LON_DEFAULT;

@@ -77,6 +77,12 @@ extern bool     cfgDateEnabled;       // true = show date periodically
 extern char     cfgUiLanguage[];      // web panel UI language (e.g. "en", "pt") — independent of cfgLocale
 extern uint8_t  cfgClockMode;         // CLOCK_MODE_HHMM or CLOCK_MODE_HHMMSS
 
+// ─── Auto brightness by time of day (Sub-Task 6b) ─────────────────────────────
+extern bool     cfgNightBrightnessEnabled; // true = auto dimming active
+extern uint8_t  cfgNightBrightnessLevel;   // brightness during night window (0–15)
+extern uint16_t cfgNightStartMin;          // night window start, minutes-of-day (0–1439)
+extern uint16_t cfgNightEndMin;            // night window end, minutes-of-day (0–1439); start==end means disabled
+
 // ─── Weather configuration (Phase 4) ──────────────────────────────────────────
 extern float    cfgWeatherLat;        // latitude
 extern float    cfgWeatherLon;        // longitude

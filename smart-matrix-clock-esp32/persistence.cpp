@@ -101,6 +101,12 @@ void loadConfig() {
     slotScheduleEndMin[3]   = _prefs.getUShort(NVS_KEY_SLOT3_SCHED_END, QUOTES_SCHED_END_DEFAULT_MIN);
     slotScheduleDaysMask[3] = _prefs.getUChar(NVS_KEY_SLOT3_SCHED_DAYS, QUOTES_SCHED_DAYS_DEFAULT);
 
+    // ── Auto brightness (Sub-Task 6b) ──────────────────────────────────────────
+    cfgNightBrightnessEnabled = _prefs.getBool(NVS_KEY_NIGHT_BRI_EN,   DEFAULT_NIGHT_BRIGHTNESS_ENABLED);
+    cfgNightBrightnessLevel   = _prefs.getUChar(NVS_KEY_NIGHT_BRI_LVL, DEFAULT_NIGHT_BRIGHTNESS_LEVEL);
+    cfgNightStartMin          = _prefs.getUShort(NVS_KEY_NIGHT_START,  DEFAULT_NIGHT_START_MIN);
+    cfgNightEndMin            = _prefs.getUShort(NVS_KEY_NIGHT_END,    DEFAULT_NIGHT_END_MIN);
+
     _close();
 }
 
@@ -151,6 +157,12 @@ void saveConfig() {
     _prefs.putUShort(NVS_KEY_SLOT3_SCHED_START, slotScheduleStartMin[3]);
     _prefs.putUShort(NVS_KEY_SLOT3_SCHED_END,   slotScheduleEndMin[3]);
     _prefs.putUChar(NVS_KEY_SLOT3_SCHED_DAYS,   slotScheduleDaysMask[3]);
+
+    // ── Auto brightness (Sub-Task 6b) ──────────────────────────────────────────
+    _prefs.putBool(NVS_KEY_NIGHT_BRI_EN,    cfgNightBrightnessEnabled);
+    _prefs.putUChar(NVS_KEY_NIGHT_BRI_LVL,  cfgNightBrightnessLevel);
+    _prefs.putUShort(NVS_KEY_NIGHT_START,   cfgNightStartMin);
+    _prefs.putUShort(NVS_KEY_NIGHT_END,     cfgNightEndMin);
 
     _close();
 }
@@ -219,4 +231,10 @@ void factoryReset() {
     slotScheduleStartMin[3] = QUOTES_SCHED_START_DEFAULT_MIN;
     slotScheduleEndMin[3]   = QUOTES_SCHED_END_DEFAULT_MIN;
     slotScheduleDaysMask[3] = QUOTES_SCHED_DAYS_DEFAULT;
+
+    // ── Auto brightness (Sub-Task 6b) ──────────────────────────────────────────
+    cfgNightBrightnessEnabled = DEFAULT_NIGHT_BRIGHTNESS_ENABLED;
+    cfgNightBrightnessLevel   = DEFAULT_NIGHT_BRIGHTNESS_LEVEL;
+    cfgNightStartMin          = DEFAULT_NIGHT_START_MIN;
+    cfgNightEndMin            = DEFAULT_NIGHT_END_MIN;
 }

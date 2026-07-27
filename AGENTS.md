@@ -27,7 +27,17 @@ pio run -t upload  # upload
 pio device monitor # serial monitor
 ```
 
-There are no unit tests — validation is done on physical hardware. Always run the compile/verify step after any code change before reporting completion.
+Always run **both** validation steps after any code change before reporting completion:
+
+```bash
+# 1. Native unit tests (no device required) — must finish with ✓ ALL PASS
+cd tests && make
+
+# 2. Firmware compile check (no device required)
+arduino-cli compile --fqbn esp32:esp32:esp32 smart-matrix-clock-esp32
+```
+
+The test suite lives in [`tests/`](tests/) and runs on the host — no ESP32 needed. See [docs/testing.md](docs/testing.md) for the full reference.
 
 ### Required libraries (already installed)
 
@@ -158,3 +168,93 @@ Raw column 0 is the **rightmost** physical pixel; raw column 31 is the leftmost.
 ## Yahoo Finance API
 
 Use `v8/finance/chart/{symbol}` — **not** `v7/finance/quote` (that endpoint 401s without a session cookie). Set a fake desktop User-Agent with `http.setUserAgent(...)` — Yahoo rejects the default ESP32 UA.
+
+## Test Suite
+
+The test suite is a native host build — no ESP32, no simulator, no special toolchain. It compiles and runs with plain `g++`.
+
+### Running the tests
+
+```bash
+cd tests
+make          # build + run (shows per-suite results and final ✓ / ✗ summary)
+make build    # build only
+make clean    # remove build artefacts
+```
+
+The runner exits with code `0` when all tests pass and `1` when any test fails. CI should check the exit code.
+
+### Test file map
+
+| File | Module under test | What is covered |
+|---|---|---|
+| [`tests/test_text_encoding.cpp`](tests/test_text_encoding.cpp) | `text_encoding.cpp` | `utf8ToLatin1`, `latin1ToUtf8`, `expandIconTags` (all 11 icons, unknown tags, buffer limits, null guards), `formatQuotePrice` |
+| [`tests/test_locale_data.cpp`](tests/test_locale_data.cpp) | `locale_data.cpp` | Day/month names EN + PT, `ianaToPostfix` (known zones + edge cases), `tzTableEntry` consistency, all WMO codes EN + PT |
+| [`tests/test_slot_schedule.cpp`](tests/test_slot_schedule.cpp) | `display.cpp` (schedule algorithm) | Same-day window, always-active sentinel (`start == end`), midnight-crossing window, day-mask gating, night-brightness window |
+| [`tests/test_data_fetcher_split.cpp`](tests/test_data_fetcher_split.cpp) | `data_fetcher.cpp` (ticker split) | Comma splitting, whitespace trimming, empty tokens, max-symbol cap, buffer safety |
+| [`tests/test_persistence_language.cpp`](tests/test_persistence_language.cpp) | `persistence.cpp` / `config.h` | `isUiLanguageValid`, `formatQuotePrice` separators, NVS key length ≤ 15, config constant sanity |
+
+### What modules are NOT covered by host tests
+
+These modules have hard dependencies on Arduino/ESP32 runtime APIs and cannot be tested without hardware:
+
+| Module | Reason |
+|---|---|
+| `display.cpp` | Requires `MD_Parola` / `MD_MAX72XX` hardware objects |
+| `wifi_manager.cpp` | Requires `WiFi.*` ESP32 stack |
+| `ntp.cpp` | Requires `configTime()` / `getLocalTime()` ESP32 APIs |
+| `persistence.cpp` | Requires `Preferences` (NVS flash) |
+| `web_routes.cpp` | Requires `ESPAsyncWebServer` |
+| `data_fetcher.cpp` | Requires `HTTPClient` and a live network |
+
+For these modules, validation is done on-device after flashing.
+
+### Adding tests for new logic
+
+When you add or modify a **pure-logic function** (no Arduino/ESP32 calls) in any module:
+
+1. **Decide the file.** If the function lives in `text_encoding.cpp` or `locale_data.cpp`, add tests directly to the matching test file. For logic extracted from other modules (like the schedule algorithm in `display.cpp`), add a new `test_<module>.cpp`.
+
+2. **Add a new test file** (if needed):
+   - Add `test_<name>.cpp` in `tests/`.
+   - Register it in the `TEST_SRCS` list in [`tests/Makefile`](tests/Makefile).
+   - Include `framework.h` and declare `SUITE`/`TEST` blocks — no `main()` needed.
+
+3. **Write SUITE + TEST blocks.** Group related assertions into named suites:
+   ```cpp
+   #include "framework.h"
+   #include "my_module.h"    // or replicate the algorithm inline
+
+   SUITE("myFunction — normal inputs") {
+       TEST("zero input returns zero") {
+           ASSERT_EQ(myFunction(0), 0);
+       }
+       TEST("negative input is clamped") {
+           ASSERT_TRUE(myFunction(-1) >= 0);
+       }
+   }
+   ```
+
+4. **For private (static) functions:** replicate the algorithm in the test file with a comment `// Algorithm replica from <file>.cpp / <function>()`. Add a note that the replica must be kept in sync if the original changes.
+
+5. **Run `cd tests && make`** — must finish `✓ ALL PASS` with no warnings before committing.
+
+6. **Also run the firmware compile** — test files must never change firmware source:
+   ```bash
+   arduino-cli compile --fqbn esp32:esp32:esp32 smart-matrix-clock-esp32
+   ```
+
+### Framework macros reference
+
+| Macro | Usage |
+|---|---|
+| `SUITE("name") { ... }` | Declares and registers a test suite |
+| `TEST("desc") { ... }` | Named test case inside a suite |
+| `ASSERT_EQ(a, b)` | Equality — prints values on failure |
+| `ASSERT_NE(a, b)` | Inequality |
+| `ASSERT_TRUE(expr)` | Truthy |
+| `ASSERT_FALSE(expr)` | Falsy |
+| `ASSERT_STREQ(s1, s2)` | `strcmp(s1, s2) == 0` |
+| `ASSERT_STRNE(s1, s2)` | `strcmp(s1, s2) != 0` |
+| `ASSERT_NEAR(a, b, eps)` | `|a - b| <= eps` (floats) |
+

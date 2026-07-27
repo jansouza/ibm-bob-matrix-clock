@@ -144,6 +144,11 @@ static void _handleGetConfig(AsyncWebServerRequest* req) {
     doc["ui_language"]      = cfgUiLanguage;
     doc["clock_mode"]       = cfgClockMode;
 
+    doc["night_brightness_enabled"] = cfgNightBrightnessEnabled;
+    doc["night_brightness_level"]   = cfgNightBrightnessLevel;
+    doc["night_start_min"]          = cfgNightStartMin;
+    doc["night_end_min"]            = cfgNightEndMin;
+
     doc["weather_enabled"]    = slotEnabled[2];
     doc["weather_update_ms"]  = cfgWeatherUpdateMs;
     doc["weather_display_ms"] = slotIntervalMs[2];
@@ -378,6 +383,30 @@ static void _handlePostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t 
         int d = doc["quotes_sched_days"].as<int>();
         if (d < 0 || d > SLOT_SCHEDULE_DAYS_MAX) { _sendError(req, 400, "quotes_sched_days must be 0-127"); return; }
         slotScheduleDaysMask[3] = (uint8_t)d;
+        changed = true;
+    }
+
+    // ── night_brightness_enabled ──────────────────────────────────────────────
+    if (doc["night_brightness_enabled"].is<bool>()) {
+        cfgNightBrightnessEnabled = doc["night_brightness_enabled"].as<bool>();
+        changed = true;
+    }
+    if (doc["night_brightness_level"].is<int>()) {
+        int v = doc["night_brightness_level"].as<int>();
+        if (v < 0 || v > 15) { _sendError(req, 400, "night_brightness_level must be 0-15"); return; }
+        cfgNightBrightnessLevel = (uint8_t)v;
+        changed = true;
+    }
+    if (doc["night_start_min"].is<int>()) {
+        int v = doc["night_start_min"].as<int>();
+        if (v < 0 || v > 1439) { _sendError(req, 400, "night_start_min must be 0-1439"); return; }
+        cfgNightStartMin = (uint16_t)v;
+        changed = true;
+    }
+    if (doc["night_end_min"].is<int>()) {
+        int v = doc["night_end_min"].as<int>();
+        if (v < 0 || v > 1439) { _sendError(req, 400, "night_end_min must be 0-1439"); return; }
+        cfgNightEndMin = (uint16_t)v;
         changed = true;
     }
 

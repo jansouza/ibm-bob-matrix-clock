@@ -70,6 +70,9 @@ static bool     _dateActive       = false;
 static uint32_t _dateMsStart      = 0;
 static char     _dateLine[12]     = "";  // e.g. "SEG 1407" or "MON 0714"
 
+// ── Auto brightness state (Sub-Task 6b) ──────────────────────────────────────
+static bool     _lastNightActive   = false; // last evaluated night-window state
+
 // ── Slot rotation state ───────────────────────────────────────────────────────
 static bool     _slotActive       = false; // true while a non-clock slot is running
 static int8_t   _forceSlotIndex   = -1;   // set by displayForceSlot(); consumed by displayTick()
@@ -526,6 +529,28 @@ void displayBegin() {
 void displayTick() {
     uint32_t now = millis();
 
+    // ── Auto brightness by time of day (Sub-Task 6b) ──────────────────────────
+    if (cfgNightBrightnessEnabled && ntpSynced) {
+        time_t   now_t  = time(nullptr);
+        struct tm* tm_l = localtime(&now_t);
+        uint16_t nowMin = (uint16_t)(tm_l->tm_hour * 60 + tm_l->tm_min);
+        bool nightActive;
+        if (cfgNightStartMin == cfgNightEndMin) {
+            nightActive = false;  // start == end → disabled sentinel
+        } else if (cfgNightStartMin < cfgNightEndMin) {
+            nightActive = (nowMin >= cfgNightStartMin && nowMin < cfgNightEndMin);
+        } else {
+            // window crosses midnight
+            nightActive = (nowMin >= cfgNightStartMin || nowMin < cfgNightEndMin);
+        }
+        if (nightActive != _lastNightActive) {
+            _lastNightActive = nightActive;
+            if (messageBrightness < 0) {  // don't override active message brightness
+                _display.setIntensity(nightActive ? cfgNightBrightnessLevel : currentBrightness);
+            }
+        }
+    }
+
     if (clockModeChangePending) {
         clockModeChangePending = false;
         _forceRedraw();
@@ -663,15 +688,15 @@ void displayTick() {
     if (_scrolling) return;   // rotation just started a scroll — done this tick
 
     if (cfgClockMode == CLOCK_MODE_HHMMSS) {
-        // Seconds mode: HH:MM left-aligned with blinking colon + SS in small font
+        // Seconds mode: HH:MM left-aligned with STEADY colon + SS in small font.
+        // The colon never blinks — _lastBlink is reused as a 1-second refresh tick.
         if (now - _lastBlink >= BLINK_INTERVAL_MS) {
-            _lastBlink    = now;
-            _colonVisible = !_colonVisible;
+            _lastBlink = now;
 
             if (!ntpSynced) {
                 _display.setFont(nullptr);
                 _display.setTextAlignment(PA_LEFT);
-                const char* buf = _colonVisible ? "--:--" : "-- --";
+                const char* buf = "--:--";
                 uint16_t hmWidth = _display.getTextColumns(buf);
                 _display.print(buf);  // clears display, writes "--:--" at visual-left
                 // No real time to show yet — blank the seconds block instead of drawing digits.
@@ -683,7 +708,7 @@ void displayTick() {
             } else {
                 struct tm timeinfo;
                 if (getLocalTime(&timeinfo)) {
-                    _renderHHMMSS(timeinfo, _colonVisible);
+                    _renderHHMMSS(timeinfo, true);  // colon always visible in HH:MM:SS mode
                 }
             }
         }
@@ -720,6 +745,9 @@ void displayTick() {
 void setBrightness(uint8_t level) {
     currentBrightness = level;
     _display.setIntensity(level);
+    // Force re-evaluation on next displayTick() so night mode re-asserts
+    // immediately if the window is still active after a manual brightness change.
+    _lastNightActive = false;
 }
 
 void setScrollSpeed(uint16_t ms) {

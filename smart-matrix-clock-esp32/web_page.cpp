@@ -174,6 +174,29 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
           <span class="range-val" id="brightness-val-badge">4</span>
         </div>
       </div>
+      <div class="toggle-row" style="margin-top:14px;margin-bottom:4px">
+        <span style="font-size:13px;font-weight:500;color:#c9d1d9" data-i18n="clock.nightBrightness">Night mode (auto dim)</span>
+        <label class="toggle"><input type="checkbox" id="cfg-night-bri-en"/><span class="slider-toggle"></span></label>
+      </div>
+      <div id="night-bri-settings" style="display:none">
+        <div class="range-field" style="margin-top:8px">
+          <label><span data-i18n="clock.nightBrightnessLevel">Night brightness</span>: <span id="night-bri-val">0</span> / 15</label>
+          <div class="range-row">
+            <span style="font-size:12px;color:#8b949e">0</span>
+            <input id="cfg-night-bri-level" type="range" min="0" max="15" value="0"/>
+            <span style="font-size:12px;color:#8b949e">15</span>
+            <span class="range-val" id="night-bri-val-badge">0</span>
+          </div>
+        </div>
+        <div class="field" style="margin-top:8px">
+          <label data-i18n="clock.nightStart">Night starts at</label>
+          <input id="cfg-night-start" type="time" value="23:00"/>
+        </div>
+        <div class="field" style="margin-top:8px">
+          <label data-i18n="clock.nightEnd">Night ends at</label>
+          <input id="cfg-night-end" type="time" value="07:00"/>
+        </div>
+      </div>
       <div class="range-field">
         <label><span data-i18n="clock.scrollSpeed">Scroll speed</span>: <span id="speed-val">50</span> ms/frame</label>
         <div class="range-row">
@@ -514,6 +537,10 @@ var I18N = {
     'clock.dateInterval': 'Display interval (seconds)',
     'clock.display': 'Display',
     'clock.brightness': 'Brightness',
+    'clock.nightBrightness': 'Night mode (auto dim)',
+    'clock.nightBrightnessLevel': 'Night brightness',
+    'clock.nightStart': 'Night starts at',
+    'clock.nightEnd': 'Night ends at',
     'clock.scrollSpeed': 'Scroll speed',
     'clock.fast': 'Fast', 'clock.slow': 'Slow',
     'clock.scrollHint': '10 ms = fastest &mdash; 200 ms = slowest',
@@ -609,6 +636,10 @@ var I18N = {
     'clock.dateInterval': 'Intervalo de exibi&#231;&#227;o (segundos)',
     'clock.display': 'Display',
     'clock.brightness': 'Brilho',
+    'clock.nightBrightness': 'Modo noturno (auto brilho)',
+    'clock.nightBrightnessLevel': 'Brilho noturno',
+    'clock.nightStart': 'Anoitece \u00e0s',
+    'clock.nightEnd': 'Amanhece \u00e0s',
     'clock.scrollSpeed': 'Velocidade de scroll',
     'clock.fast': 'R&#225;pido', 'clock.slow': 'Lento',
     'clock.scrollHint': '10 ms = mais r&#225;pido &mdash; 200 ms = mais lento',
@@ -782,6 +813,13 @@ document.getElementById('cfg-brightness').addEventListener('input', function() {
   setText('brightness-val', this.value);
   setText('brightness-val-badge', this.value);
 });
+document.getElementById('cfg-night-bri-level').addEventListener('input', function() {
+  setText('night-bri-val', this.value);
+  setText('night-bri-val-badge', this.value);
+});
+document.getElementById('cfg-night-bri-en').addEventListener('change', function() {
+  document.getElementById('night-bri-settings').style.display = this.checked ? '' : 'none';
+});
 document.getElementById('cfg-scroll-speed').addEventListener('input', function() {
   setText('speed-val', this.value);
   setText('speed-val-badge', this.value);
@@ -855,6 +893,16 @@ function loadConfig() {
     setText('speed-val', spd);
     setText('speed-val-badge', spd);
 
+    var nightEn = !!c.night_brightness_enabled;
+    setChecked('cfg-night-bri-en', nightEn);
+    document.getElementById('night-bri-settings').style.display = nightEn ? '' : 'none';
+    var nightLvl = c.night_brightness_level !== undefined ? c.night_brightness_level : 0;
+    setVal('cfg-night-bri-level', nightLvl);
+    setText('night-bri-val', nightLvl);
+    setText('night-bri-val-badge', nightLvl);
+    setVal('cfg-night-start', minToTime(c.night_start_min !== undefined ? c.night_start_min : 1380));
+    setVal('cfg-night-end',   minToTime(c.night_end_min   !== undefined ? c.night_end_min   : 420));
+
     setChecked('cfg-weather-en', c.weather_enabled);
     setVal('cfg-weather-lat', c.weather_lat !== undefined ? c.weather_lat : '');
     setVal('cfg-weather-lon', c.weather_lon !== undefined ? c.weather_lon : '');
@@ -925,6 +973,17 @@ function pollStatus() {
   }).catch(function(){});
 }
 
+// ── Helpers: convert minutes-of-day ↔ "HH:MM" time string ───────────────────
+function minToTime(minutes) {
+  var h = Math.floor(minutes / 60);
+  var m = minutes % 60;
+  return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+}
+function timeToMin(timeStr) {
+  var parts = timeStr.split(':');
+  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+}
+
 // ── Save clock config (shared by the Display and Clock tabs) ──────────────────
 function saveClockConfig() {
   var body = {
@@ -935,7 +994,11 @@ function saveClockConfig() {
     date_enabled: checked('cfg-date-en'),
     clock_mode: checked('cfg-clock-mode') ? 1 : 0,
     brightness: parseInt(val('cfg-brightness'), 10),
-    scroll_speed_ms: parseInt(val('cfg-scroll-speed'), 10)
+    scroll_speed_ms: parseInt(val('cfg-scroll-speed'), 10),
+    night_brightness_enabled: checked('cfg-night-bri-en'),
+    night_brightness_level: parseInt(val('cfg-night-bri-level'), 10),
+    night_start_min: timeToMin(val('cfg-night-start') || '23:00'),
+    night_end_min:   timeToMin(val('cfg-night-end')   || '07:00')
   };
   fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(r) {

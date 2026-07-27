@@ -66,17 +66,45 @@ smart-matrix-clock-esp32/
 ├── display.h / display.cpp       ← rendering, scroll, blink, slot rotation
 ├── wifi_manager.h / .cpp         ← WiFi connection, setup AP, deferred restart
 ├── ntp.h / ntp.cpp               ← NTP sync and periodic re-sync
-├── text_encoding.h / .cpp        ← UTF-8 ↔ Latin-1
-├── locale_data.h / .cpp          ← day/month names, IANA → POSIX TZ table
+├── text_encoding.h / .cpp        ← UTF-8 ↔ Latin-1, icon tag expansion, price formatting
+├── locale_data.h / .cpp          ← day/month names, IANA → POSIX TZ table, WMO codes
 ├── persistence.h / .cpp          ← NVS load/save, applyTimezone, factoryReset
 ├── web_page.h / web_page.cpp     ← self-contained HTML/CSS/JS page (string literal)
 ├── web_routes.h / web_routes.cpp ← ESPAsyncWebServer route registration
 └── data_fetcher.h / .cpp         ← external HTTP fetch (Weather, Quotes), cache
+tests/
+├── Makefile                      ← build + run (native host, g++ only — no ESP32 needed)
+├── framework.h                   ← minimal SUITE / TEST / ASSERT_* test framework
+├── runner.cpp                    ← entry point
+├── stubs/                        ← thin Arduino/ESP32 header stubs
+├── test_text_encoding.cpp        ← 76 tests for utf8ToLatin1, latin1ToUtf8, expandIconTags
+├── test_locale_data.cpp          ← 82 tests for day/month names, ianaToPostfix, WMO codes
+├── test_slot_schedule.cpp        ← 53 tests for slot scheduling + night-brightness algorithm
+├── test_data_fetcher_split.cpp   ← 23 tests for ticker-string splitting
+└── test_persistence_language.cpp ← 43 tests for language validation, formatQuotePrice, config constants
 docs/
 ├── api-rest.md                   ← complete REST API reference
 ├── project-spec.md               ← full product specification
-└── implementation-plan.md        ← 5-phase implementation plan
+├── implementation-plan.md        ← 5-phase implementation plan
+└── testing.md                    ← test suite reference (structure, coverage, how to add tests)
 ```
+
+---
+
+## Testing
+
+Native host test suite — **no ESP32, no toolchain** required. Run with `cd tests && make`.
+
+| File | Tests | Covers |
+|---|---|---|
+| `test_text_encoding.cpp` | 76 | `utf8ToLatin1`, `latin1ToUtf8`, `expandIconTags` (all 11 icons), `formatQuotePrice` |
+| `test_locale_data.cpp` | 82 | Day/month names (EN+PT), 26 IANA timezones, 28 WMO weather codes |
+| `test_slot_schedule.cpp` | 53 | Slot scheduling windows (same-day, midnight-crossing, weekday masks), auto-brightness window |
+| `test_data_fetcher_split.cpp` | 23 | Ticker-string parsing (splitting, trimming, edge cases) |
+| `test_persistence_language.cpp` | 43 | `isUiLanguageValid`, price formatting, all 37 NVS key lengths, config-constant sanity |
+| **Total** | **251** | **44 suites** |
+
+→ Full reference: [`docs/testing.md`](docs/testing.md)
 
 ---
 
@@ -166,7 +194,7 @@ Beyond the 5 core phases, [`docs/enhancements-plan.md`](docs/enhancements-plan.m
 | F4 | Web interface language (pt/en in browser) | ✅ Done |
 | F5 | WiFi network scan in the web interface | 🔲 Pending |
 | F6a | Live message preview | ✅ Done |
-| F6b | Automatic brightness by time of day | 🔲 Pending |
+| F6b | Automatic brightness by time of day | ✅ Done |
 | F6c | OTA firmware update | 🔲 Pending |
 | F6d | Message history | ✅ Done |
 | F6e | Slot scheduling by time of day | ✅ Done |

@@ -179,3 +179,17 @@
 #define NVS_KEY_SLOT3_SCHED_START "s3_sch_st"
 #define NVS_KEY_SLOT3_SCHED_END   "s3_sch_en"
 #define NVS_KEY_SLOT3_SCHED_DAYS  "s3_sch_dy"
+
+// ─── Auto brightness by time of day (Sub-Task 6b) ─────────────────────────────
+// When enabled, the display automatically dims during the configured night
+// window (start..end in minutes-of-day). start == end means disabled.
+// start > end wraps past midnight (e.g. 23:00-07:00).
+#define DEFAULT_NIGHT_BRIGHTNESS_ENABLED  false
+#define DEFAULT_NIGHT_BRIGHTNESS_LEVEL    0      // fully off at night (0–15)
+#define DEFAULT_NIGHT_START_MIN           1380   // 23:00 in minutes-of-day
+#define DEFAULT_NIGHT_END_MIN             420    // 07:00 in minutes-of-day
+
+#define NVS_KEY_NIGHT_BRI_EN   "night_bri_en"   // 12 chars
+#define NVS_KEY_NIGHT_BRI_LVL  "night_bri_lvl"  // 13 chars
+#define NVS_KEY_NIGHT_START    "night_start"     // 11 chars
+#define NVS_KEY_NIGHT_END      "night_end"       //  9 chars
