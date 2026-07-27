@@ -46,7 +46,12 @@ static void _sendError(AsyncWebServerRequest* req, int code, const char* msg) {
 // ─── GET / ────────────────────────────────────────────────────────────────────
 
 static void _handleRoot(AsyncWebServerRequest* req) {
-    req->send(200, "text/html", WEB_PAGE_HTML);
+    // WEB_PAGE_HTML is ~62KB. The (code, contentType, const char*) overload
+    // copies the whole body into a heap String first — on a fragmented heap
+    // that single large allocation can silently fail, yielding a 200 OK with
+    // Content-Length: 0 (blank page). This overload streams straight from the
+    // static array in chunks instead, with no large intermediate allocation.
+    req->send(200, "text/html", (const uint8_t*)WEB_PAGE_HTML, strlen(WEB_PAGE_HTML));
 }
 
 // ─── GET /api/status ─────────────────────────────────────────────────────────
@@ -65,9 +70,14 @@ static void _handleGetStatus(AsyncWebServerRequest* req) {
     if (ntpSynced) {
         struct tm timeinfo;
         if (getLocalTime(&timeinfo) && (timeinfo.tm_year + 1900) >= 2020) {
-            char tbuf[6];
-            snprintf(tbuf, sizeof(tbuf), "%02d:%02d",
-                     timeinfo.tm_hour, timeinfo.tm_min);
+            char tbuf[10];
+            if (cfgClockMode == CLOCK_MODE_HHMMSS) {
+                snprintf(tbuf, sizeof(tbuf), "%02d:%02d:%02d",
+                         timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+            } else {
+                snprintf(tbuf, sizeof(tbuf), "%02d:%02d",
+                         timeinfo.tm_hour, timeinfo.tm_min);
+            }
             doc["time_str"] = tbuf;
         } else {
             doc["time_str"] = "--:--";
@@ -253,6 +263,7 @@ static void _handlePostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t 
         int v = doc["clock_mode"].as<int>();
         if (v < 0 || v > 1) { _sendError(req, 400, "clock_mode must be 0 (HH:MM) or 1 (HH:MM:SS)"); return; }
         cfgClockMode = (uint8_t)v;
+        clockModeChangePending = true;
         changed = true;
     }
 

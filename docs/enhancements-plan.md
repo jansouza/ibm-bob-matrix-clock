@@ -16,6 +16,7 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 
 | Sub-task | Feature |
 |---|---|
+| Sub-Task 1 | Configurable HH:MM:SS clock mode (`HH:MM` left-aligned with blinking colon + `SS` in 3×5 small font) |
 | Sub-Task 2 | Icons/symbols in messages (`[heart]`, `[star]`, `[warn]`, etc.) |
 | Sub-Task 4 | Web interface language (EN/PT, persisted on device) |
 | Sub-Task 6a | Live message preview (icon tags resolved in browser before sending) |
@@ -26,7 +27,6 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 
 | Sub-task | Feature | Urgency |
 |---|---|---|
-| Sub-Task 1 | Configurable HH:MM:SS clock mode | 🔴 High |
 | Sub-Task 3 | Web interface password (HTTP Basic Auth) | 🟢 Low |
 | Sub-Task 5 | WiFi network scan (`GET /api/wifi/scan`) | 🟢 Low |
 | Sub-Task 6b | Automatic brightness by time of day | 🟡 Medium |
@@ -50,7 +50,9 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 
 ## Sub-Task 1 — Configurable HH:MM:SS mode (High urgency)
 
-**Status:** `[ ] pending`
+**Status:** `[x] done`
+
+> **Implementation note:** follows the original design — `HH:MM` in normal font left-aligned with blinking colon every 500 ms, and `SS` overlaid in the 3×5 `_dateSmallFont` at visual columns `SS_COL_START` (21) and `SS_COL_START+4` (25) via direct `setColumn()` calls. `_writeSmallDigit()` navigates the PROGMEM font table; `_renderHHMMSS()` orchestrates the full render. `displayForceRedraw()` is called by `web_routes.cpp` when `clock_mode` changes at runtime.
 
 ### Intent
 

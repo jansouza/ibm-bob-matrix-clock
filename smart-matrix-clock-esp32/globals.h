@@ -44,6 +44,9 @@ extern uint16_t scrollSpeed;          // ms per scroll frame
 // ─── NTP / time ───────────────────────────────────────────────────────────────
 extern bool     ntpSynced;            // true once first NTP sync is done
 
+// ─── Clock mode ───────────────────────────────────────────────────────────────
+extern bool     clockModeChangePending; // set by HTTP handler, cleared by display
+
 // ─── Message ──────────────────────────────────────────────────────────────────
 extern bool     messagePending;       // set by HTTP handler, cleared by display
 extern char     messageText[];        // Latin-1 encoded, null-terminated

@@ -160,7 +160,7 @@ Beyond the 5 core phases, [`docs/enhancements-plan.md`](docs/enhancements-plan.m
 
 | # | Feature | Status |
 |---|---|---|
-| F1 | Seconds clock mode (`HH:MM:SS`) | 🔲 Pending |
+| F1 | Seconds clock mode (`HH:MM:SS`) | ✅ Done |
 | F2 | Icons/symbols in messages | ✅ Done |
 | F3 | Password for the web interface (HTTP Basic Auth) | 🔲 Pending |
 | F4 | Web interface language (pt/en in browser) | ✅ Done |
@@ -168,8 +168,8 @@ Beyond the 5 core phases, [`docs/enhancements-plan.md`](docs/enhancements-plan.m
 | F6a | Live message preview | ✅ Done |
 | F6b | Automatic brightness by time of day | 🔲 Pending |
 | F6c | OTA firmware update | 🔲 Pending |
-| F6d | Message history | 🔲 Pending |
-| F6e | Slot scheduling by time of day | 🔲 Pending |
+| F6d | Message history | ✅ Done |
+| F6e | Slot scheduling by time of day | ✅ Done |
 | F6f | Soft reboot via panel | 🔲 Pending |
 
 Details in [`docs/enhancements-plan.md`](docs/enhancements-plan.md).

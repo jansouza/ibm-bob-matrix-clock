@@ -83,12 +83,15 @@ To install the ESP32 core (if not present): `arduino-cli core install esp32:esp3
 - `messageBrightness` / `messageScrollSpeedMs` — per-message overrides; `-1` means use configured global value
 - `slotEnabled[4]` — `{clock, message, weather, quotes}` — disabled slots are silently skipped
 - `slotIntervalMs[4]` — clock slot is `0` (permanent base); message slot is `0` (one-shot); default values in `globals.cpp` are `{0, 0, 60000, 120000}` regardless of `config.h` display defaults
+- `slotScheduleStartMin[slot]` / `slotScheduleEndMin[slot]` — daily window in minutes-of-day (0–1439); **`start == end` means "always active"** — only slots 2 and 3 (weather/quotes) use this
+- `slotScheduleDaysMask[slot]` — bitmask of enabled weekdays; bit N corresponds to `tm_wday` (0=Sunday, 6=Saturday); `0x7F` = all days
+- `messageHistory[]` — ring buffer of last 20 messages; managed via `messageHistoryHead` (oldest index) and `messageHistoryCount`; exposed by `GET /api/messages/history`
 
 ## Hardware
 
 - 4× MAX7219 FC16 8×8 LED modules chained via VSPI: CLK=18, DATA/MOSI=23, CS=5
 - Display type constant: `MD_MAX72XX::FC16_HW` — must match physical hardware type or columns will be scrambled
-- **FC16_HW column direction**: raw column 0 is the **rightmost** physical pixel, raw column 31 is the leftmost — critical for any direct pixel manipulation via `getGraphicObject()`
+- **FC16_HW column direction**: raw column 0 is the **rightmost** physical pixel, raw column 31 is the leftmost — critical for any direct pixel manipulation via `getGraphicObject()`; `_writeSmallDigit()` compensates with `setColumn(31 - visualCol - i, ...)`
 - BOOT button (GPIO 0, active-LOW) held at power-on triggers factory reset
 
 ## NTP / Timezone
@@ -100,9 +103,58 @@ To install the ESP32 core (if not present): `arduino-cli core install esp32:esp3
 ## Data Sources
 
 - **Weather**: Open-Meteo — free, no API key; uses `current=temperature_2m,weathercode` + `daily=temperature_2m_max,temperature_2m_min` in a single request
-- **Quotes**: Yahoo Finance `v8/finance/chart/{symbol}` (per-symbol, not batch) — **not** `v7/finance/quote` (that endpoint 401s without a session cookie). A fake desktop User-Agent header is required; the ESP32 default UA is rejected.
+- **Quotes**: Yahoo Finance `v8/finance/chart/{symbol}` (per-symbol, not batch) — **not** `v7/finance/quote` (that endpoint 401s without a session cookie). A fake desktop User-Agent with `http.setUserAgent(...)` is required — Yahoo rejects the default ESP32 UA.
 
 ## Failure / Cache Policy
 
 - If a slot's data fetch fails and there is no cache → slot is silently skipped that rotation cycle
 - If cache exists but fetch failed → display with `*` prefix (e.g., `*22°C Nublado`)
+
+## Clock Mode (HH:MM:SS)
+
+- `cfgClockMode` — `CLOCK_MODE_HHMM` (0, default) or `CLOCK_MODE_HHMMSS` (1); persisted in NVS key `"clock_mode"`
+- In HHMMSS mode: `HH:MM` is rendered with `PA_LEFT` via `_display.print()`; seconds are overlaid via direct `setColumn()` calls (does **not** clear the display). The seconds position is computed dynamically by `_ssLayout(hmWidthPx)` — **not** a fixed column — so `HH:MM` width is measured first with `getTextWidth()`.
+- Changing `cfgClockMode` at runtime requires calling `displayForceRedraw()` (sets `_lastTimeStr[0] = '\0'` and resets alignment to `PA_CENTER`) — otherwise the display keeps stale layout state.
+- `/api/status` returns `time_str` as `HH:MM:SS` when `cfgClockMode == CLOCK_MODE_HHMMSS`, used by the web panel live preview (polled every 1 second).
+
+## Adding a New UI Language
+
+1. Add the code string to `_uiLanguages[]` in `persistence.cpp` — this is the **only** validation source.
+2. Add a matching I18N dictionary entry in `web_page.cpp`.
+No other branching logic is needed.
+
+## Adding a New Slot
+
+1. Add an index constant in `config.h`.
+2. Initialize `slotEnabled[]` and `slotIntervalMs[]` entry in `globals.cpp`.
+3. Add cache struct in `globals.h/cpp`.
+4. Add fetch logic in `data_fetcher.cpp` called from `fetcherTick()`.
+5. Add rendering branch in `slotRotationTick()` in `display.cpp`.
+6. Expose enable/interval config fields through `POST /api/config` in `web_routes.cpp`.
+7. Persist the new fields in `persistence.cpp`.
+
+## Naming Conventions
+
+- Module-private state variables: `static` in `.cpp`, prefixed with `_` (e.g., `_lastBlink`, `_colonVisible`).
+- Public API functions: `camelCase` with module prefix (e.g., `displayTick()`, `ntpBegin()`, `wifiConnect()`).
+- Constants in `config.h`: `SCREAMING_SNAKE_CASE`.
+- `extern` globals in `globals.h`: no prefix, plain `camelCase` (e.g., `ntpSynced`, `messagePending`).
+
+## Include Order (per file)
+
+1. Own header (e.g., `#include "display.h"`)
+2. Project headers (e.g., `#include "config.h"`, `#include "globals.h"`)
+3. Arduino/ESP32 library headers (e.g., `#include <MD_Parola.h>`, `#include <Arduino.h>`)
+4. C standard headers (e.g., `#include <time.h>`)
+
+## Display Write Optimisation
+
+`displayTick()` compares the new time string against `_lastTimeStr` and only calls `_display.print()` when the content actually changed — preserve this guard when modifying the render path. The MAX7219 write is the expensive/blocking part of each tick.
+
+## FC16_HW Column Direction (direct pixel work only)
+
+Raw column 0 is the **rightmost** physical pixel; raw column 31 is the leftmost. The `_startDateDisplay()` implementation in `display.cpp` has a detailed comment explaining how this affects repositioning and day-of-week decoration loops — read it before doing any `getGraphicObject()` pixel manipulation.
+
+## Yahoo Finance API
+
+Use `v8/finance/chart/{symbol}` — **not** `v7/finance/quote` (that endpoint 401s without a session cookie). Set a fake desktop User-Agent with `http.setUserAgent(...)` — Yahoo rejects the default ESP32 UA.

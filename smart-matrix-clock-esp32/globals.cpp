@@ -16,6 +16,9 @@ uint16_t scrollSpeed        = DEFAULT_SCROLL_SPEED_MS;
 // ─── NTP / time ───────────────────────────────────────────────────────────────
 bool ntpSynced = false;
 
+// ─── Clock mode ───────────────────────────────────────────────────────────────
+bool clockModeChangePending = false;
+
 // ─── Message ──────────────────────────────────────────────────────────────────
 bool messagePending    = false;
 char messageText[MAX_MESSAGE_LEN] = {0};

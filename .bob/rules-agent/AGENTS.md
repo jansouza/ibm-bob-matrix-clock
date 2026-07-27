@@ -23,6 +23,29 @@ arduino-cli compile --fqbn esp32:esp32:esp32 smart-matrix-clock-esp32
 - **Always use `ArduinoJson`** for building or parsing JSON — never string concatenation.
 - **`applyTimezone()` must run after `ntpBegin()`** in `setup()` — and again in `ntpTick()` after each periodic re-sync — because `configTime()` resets TZ to UTC internally every call.
 
+## Clock Mode Gotchas
+
+- In `CLOCK_MODE_HHMMSS`: `HH:MM` is rendered with `PA_LEFT`; seconds are overlaid via `setColumn()`. The seconds start column is **dynamic** — computed by `_ssLayout(hmWidthPx)` which measures the rendered `HH:MM` width via `getTextWidth()` first. Do **not** hardcode a column.
+- `_writeSmallDigit(visualCol, digit)` reverses the column index: it calls `setColumn(31 - visualCol - i, ...)` to account for FC16_HW's right-to-left raw column order.
+- Changing `cfgClockMode` at runtime: must call `displayForceRedraw()` or the display retains the previous mode's alignment/layout state.
+- `/api/status` `time_str` field reflects the active clock mode (`HH:MM` or `HH:MM:SS`) — if you add another mode, update `_handleGetStatus()` in `web_routes.cpp` to match.
+
+## Slot Scheduling
+
+- `slotScheduleStartMin[slot] == slotScheduleEndMin[slot]` → slot has **no time restriction** (always active). Do not treat equal values as an invalid range.
+- `slotScheduleDaysMask[slot]` uses `tm_wday` bit positions: 0=Sunday, 1=Monday … 6=Saturday. `0x7F` = all days enabled.
+- Scheduling is only wired for slots 2 (weather) and 3 (quotes). Slot 0 (clock) and slot 1 (message) ignore these arrays.
+
+## UI Language Validation
+
+- `_uiLanguages[]` in `persistence.cpp` is the **single source of truth** for valid UI language codes. When adding a new language: add its code there first, then add its I18N dictionary in `web_page.cpp`. No other branching needed.
+
+## Message History Ring Buffer
+
+- `messageHistory[]` (`globals.h`) is a fixed-size ring buffer of `MESSAGE_HISTORY_SIZE` (20) entries.
+- `messageHistoryHead` is the index of the **oldest** entry; `messageHistoryCount` tracks how many entries are valid.
+- To iterate oldest-to-newest: `idx = (messageHistoryHead + i) % MESSAGE_HISTORY_SIZE` for `i` in `0..messageHistoryCount-1`.
+
 ## Adding a New Slot
 
 1. Add an index constant in `config.h`.

@@ -218,7 +218,7 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
         <span style="font-size:13px;font-weight:500;color:#c9d1d9" data-i18n="clock.showSeconds">Show seconds (HH:MM:SS)</span>
         <label class="toggle"><input type="checkbox" id="cfg-clock-mode"/><span class="slider-toggle"></span></label>
       </div>
-      <div class="hint" data-i18n="clock.showSecondsHint">When enabled, the clock displays HH:MM:SS and updates every second. The colon no longer blinks.</div>
+      <div class="hint" data-i18n="clock.showSecondsHint">When enabled, the clock displays HH:MM:SS.</div>
     </div>
 
     <div class="card">
@@ -604,7 +604,7 @@ var I18N = {
     'clock.date': 'Data',
     'clock.clockMode': 'Modo do rel&#243;gio',
     'clock.showSeconds': 'Mostrar segundos (HH:MM:SS)',
-    'clock.showSecondsHint': 'Quando ativado, o rel&#243;gio exibe HH:MM:SS e atualiza a cada segundo. Os dois-pontos n&#227;o piscam.',
+    'clock.showSecondsHint': 'Quando ativado, o rel&#243;gio exibe HH:MM:SS.',
     'clock.showDatePeriodically': 'Exibir data periodicamente',
     'clock.dateInterval': 'Intervalo de exibi&#231;&#227;o (segundos)',
     'clock.display': 'Display',
@@ -1096,6 +1096,21 @@ function updateMessagePreview() {
 
 populateMessageIcons();
 document.getElementById('message-text').addEventListener('input', updateMessagePreview);
+
+// ── Clock-mode toggle: update live preview format immediately ──────────────
+document.getElementById('cfg-clock-mode').addEventListener('change', function() {
+  var preview = document.getElementById('live-preview');
+  var cur = preview.textContent;
+  // Only reformat if we have a real time value (not placeholder)
+  if (!/^\d{2}:\d{2}/.test(cur)) return;
+  if (this.checked) {
+    // HH:MM → HH:MM:SS  (append :00 as placeholder until next poll)
+    if (cur.length === 5) preview.textContent = cur + ':00';
+  } else {
+    // HH:MM:SS → HH:MM
+    if (cur.length === 8) preview.textContent = cur.substring(0, 5);
+  }
+});
 
 // ── Send message ───────────────────────────────────────────────────────────────
 document.getElementById('btn-send-message').addEventListener('click', function() {

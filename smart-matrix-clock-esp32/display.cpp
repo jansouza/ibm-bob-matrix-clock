@@ -286,6 +286,92 @@ static void _startDateDisplay() {
     _lastTimeStr[0] = '\0';
 }
 
+// Clear the cached time string and reset alignment so the clock redraws from
+// scratch on this displayTick() call. Consumes clockModeChangePending, which is
+// set by the HTTP handler when cfgClockMode changes at runtime — the actual
+// display write must happen here, from the loop() task, not from the handler's
+// call stack (concurrent SPI access from the AsyncTCP task would race displayTick()).
+static void _forceRedraw() {
+    _lastTimeStr[0] = '\0';
+    _display.setTextAlignment(PA_CENTER);
+}
+
+// ─── HH:MM:SS helpers ─────────────────────────────────────────────────────────────
+
+// Every _dateSmallFont glyph is 3 columns wide (see date_font.h). Cleared
+// before each draw regardless, as cheap insurance against any future glyph
+// narrower than the cell leaving the previous digit's pixels behind.
+#define SS_DIGIT_CELL_PX  3
+
+// Write one decimal digit from _dateSmallFont at the given visual start column.
+// _dateSmallFont PROGMEM layout: header = 'F', version, firstChar(32), lastChar(90),
+// height (5 bytes total), then per-glyph entries: <width>, <col0..colN-1>.
+// FC16_HW column mapping: raw col = 31 - visual col.
+static void _writeSmallDigit(uint8_t visualCol, char digit) {
+    const uint8_t firstChar = pgm_read_byte(&_dateSmallFont[2]);  // = 32
+    uint16_t offset = 5;  // skip 5-byte header
+
+    for (char c = (char)firstChar; c < digit; c++) {
+        uint8_t w = pgm_read_byte(&_dateSmallFont[offset]);
+        offset += 1 + w;
+    }
+
+    uint8_t width = pgm_read_byte(&_dateSmallFont[offset]);
+    offset++;
+
+    MD_MAX72XX* mx = _display.getGraphicObject();
+    // Clear the full cell first — cheap insurance against any future glyph
+    // narrower than the cell leaving the previous digit's pixels behind.
+    for (uint8_t i = 0; i < SS_DIGIT_CELL_PX; i++)
+        mx->setColumn((uint8_t)(31 - visualCol - i), 0);
+    for (uint8_t i = 0; i < width; i++) {
+        uint8_t colByte = pgm_read_byte(&_dateSmallFont[offset + i]);
+        // Shift 1 physical row down (the font is normally 1 row from the top,
+        // 2 from the bottom -- see date_font.h) so the seconds sit lower,
+        // subscript-style, under the main HH:MM text instead of centred.
+        mx->setColumn((uint8_t)(31 - visualCol - i), (uint8_t)(colByte << 1));
+    }
+}
+
+// Where the small-font seconds block (tens digit, optional 1px inner gap,
+// units digit) should go, given the actual pixel width of the just-printed
+// HH:MM text. Default-font digit widths vary (e.g. '1' is 3px, most others
+// are 5px), so HH:MM's width swings between 17 and 26px depending on which
+// digits are showing -- a fixed start column overlaps the minute's last
+// digit for most times. Prefers, in order: a 1px gap on both sides of SS
+// (MM|SS and tens|units) > a 1px MM|SS gap only > no gaps at all. The
+// widest HH:MM strings (26px) leave exactly 6 spare columns on the 32-column
+// display -- just enough for the two 3px digits with no gap anywhere.
+struct SSLayout { uint8_t start; uint8_t unitsOffset; };
+
+static SSLayout _ssLayout(uint16_t hmWidthPx) {
+    if (hmWidthPx + 1 + SS_DIGIT_CELL_PX + 1 + SS_DIGIT_CELL_PX <= DISPLAY_WIDTH_PX)
+        return SSLayout{ (uint8_t)(hmWidthPx + 1), (uint8_t)(SS_DIGIT_CELL_PX + 1) };
+    if (hmWidthPx + 1 + 2 * SS_DIGIT_CELL_PX <= DISPLAY_WIDTH_PX)
+        return SSLayout{ (uint8_t)(hmWidthPx + 1), SS_DIGIT_CELL_PX };
+    return SSLayout{ (uint8_t)(DISPLAY_WIDTH_PX - 2 * SS_DIGIT_CELL_PX), SS_DIGIT_CELL_PX };
+}
+
+// Render HH:MM (blinking colon, normal font, PA_LEFT) and overlay SS in small
+// font right after it (see _ssLayout).
+// _display.print() clears the full display first; setColumn() then overlays SS.
+static void _renderHHMMSS(struct tm& t, bool colonVisible) {
+    // ':' and ' ' are both 2px wide in this display's default font, so
+    // swapping between them to blink never shifts MM or the SS start column.
+    char hmBuf[8];
+    snprintf(hmBuf, sizeof(hmBuf), colonVisible ? "%02d:%02d" : "%02d %02d",
+             t.tm_hour, t.tm_min);
+
+    _display.setFont(nullptr);
+    _display.setTextAlignment(PA_LEFT);
+    uint16_t hmWidth = _display.getTextColumns(hmBuf);
+    _display.print(hmBuf);  // clears display, writes HH:MM at visual-left
+
+    SSLayout ss = _ssLayout(hmWidth);
+    _writeSmallDigit(ss.start,                  (char)('0' + t.tm_sec / 10));
+    _writeSmallDigit(ss.start + ss.unitsOffset, (char)('0' + t.tm_sec % 10));
+}
+
 // ─── Slot rotation ────────────────────────────────────────────────────────────
 
 // Build the weather display string into dst[dstLen].
@@ -440,6 +526,11 @@ void displayBegin() {
 void displayTick() {
     uint32_t now = millis();
 
+    if (clockModeChangePending) {
+        clockModeChangePending = false;
+        _forceRedraw();
+    }
+
     // ── Advance scroll animation ───────────────────────────────────────────────
     if (_scrolling) {
         if (_display.displayAnimate()) {
@@ -572,29 +663,28 @@ void displayTick() {
     if (_scrolling) return;   // rotation just started a scroll — done this tick
 
     if (cfgClockMode == CLOCK_MODE_HHMMSS) {
-        // ── Seconds mode: update every second, colon always visible ───────────
-        if (now - _lastBlink >= 1000UL) {
-            _lastBlink = now;
+        // Seconds mode: HH:MM left-aligned with blinking colon + SS in small font
+        if (now - _lastBlink >= BLINK_INTERVAL_MS) {
+            _lastBlink    = now;
+            _colonVisible = !_colonVisible;
 
-            char buf[10];
             if (!ntpSynced) {
-                snprintf(buf, sizeof(buf), "--:--:--");
+                _display.setFont(nullptr);
+                _display.setTextAlignment(PA_LEFT);
+                const char* buf = _colonVisible ? "--:--" : "-- --";
+                uint16_t hmWidth = _display.getTextColumns(buf);
+                _display.print(buf);  // clears display, writes "--:--" at visual-left
+                // No real time to show yet — blank the seconds block instead of drawing digits.
+                SSLayout ss = _ssLayout(hmWidth);
+                uint8_t ssEnd = ss.start + ss.unitsOffset + SS_DIGIT_CELL_PX;
+                MD_MAX72XX* mx = _display.getGraphicObject();
+                for (uint8_t vc = ss.start; vc < ssEnd; vc++)
+                    mx->setColumn((uint8_t)(31 - vc), 0);
             } else {
                 struct tm timeinfo;
-                if (!getLocalTime(&timeinfo)) {
-                    snprintf(buf, sizeof(buf), "--:--:--");
-                } else {
-                    snprintf(buf, sizeof(buf), "%02d:%02d:%02d",
-                             timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+                if (getLocalTime(&timeinfo)) {
+                    _renderHHMMSS(timeinfo, _colonVisible);
                 }
-            }
-
-            if (strcmp(buf, _lastTimeStr) != 0) {
-                strncpy(_lastTimeStr, buf, sizeof(_lastTimeStr) - 1);
-                _lastTimeStr[sizeof(_lastTimeStr) - 1] = '\0';
-                _display.setFont(nullptr);
-                _display.setTextAlignment(PA_CENTER);
-                _display.print(buf);
             }
         }
     } else {
@@ -652,3 +742,4 @@ void displayForceSlot(uint8_t slotIndex) {
     // displayTick() / _slotRotationTick() consumes it on the next loop iteration.
     _forceSlotIndex = (int8_t)slotIndex;
 }
+

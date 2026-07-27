@@ -1,54 +1,67 @@
 # AGENTS.md — Plan mode
 
-This file provides guidance to agents planning or designing changes in this repository.
+This file provides guidance to agents planning changes or new features in this repository.
 
 ## Architectural Constraints
 
-- **Single cooperative loop** — any new feature must integrate as a non-blocking tick function called from `loop()`. There is no RTOS, no threads, no `delay()` in normal operation. Exception: `delay(200)` in `_stationConnect()` (`wifi_manager.cpp`) is intentional and runs only during `setup()`.
-- **HTTP handlers are stateless mutators** — they may only validate input and write to shared globals. All side effects (display update, network I/O, restart) must be deferred to `loop()`.
-- **`HTTPClient` is synchronous** — it blocks for up to 5 s. It must only run from `fetcherTick()`, timed by `millis()`, never inside a handler or render path. Use `http.getString()` (not `getStream()`) — chunked responses are unreliable with the stream path on ESP32.
-- **Restart requires a deferred pattern** — `scheduleRestart(delayMs)` sets a flag; `loop()` executes `ESP.restart()` after the delay so in-flight HTTP responses complete.
-- **Display driver is blocking per-write** — minimize calls to `_display.print()` (the optimisation guard in `displayTick()` exists for this reason).
-- **All config persisted in a single NVS namespace `"clk"`** via `Preferences` — plan new fields in `persistence.cpp`, not as separate namespaces.
-- **`applyTimezone()` must run after `ntpBegin()`** in `setup()` — `configTime()` resets TZ to UTC internally. This ordering is load-bearing; inverting it means the device always runs UTC. `applyTimezone()` must also be re-called in `ntpTick()` after each periodic re-sync.
-- **FC16_HW column direction** — raw column 0 is the rightmost physical pixel. Any layout that touches `getGraphicObject()` directly must account for this reversal.
+- **`loop()` is single-threaded and must never block** — any new feature that requires I/O (HTTP, filesystem) must be deferred through a state variable and executed from a tick function in `loop()`.
+- **HTTP handlers are zero-latency** — they only read the request body and write globals. All side-effects (display, network, restart) happen in the next `loop()` iteration.
+- **`ESPAsyncWebServer` handlers run on a background task** — accessing shared globals from a handler is safe only for simple reads/writes; never call `_display` or `HTTPClient` from a handler.
+- **`WEB_PAGE_HTML` is a monolithic string** — there is no templating or server-side rendering. All UI state is fetched via `fetch('/api/config')` and `fetch('/api/status')` on page load. Plan new UI features as additions to the existing JS, not new endpoints that return HTML fragments.
+- **NVS key length limit**: ESP32 `Preferences` key names must be ≤15 characters. All NVS keys are defined in `config.h` — add new ones there.
 
-## Phase Status
+## Slot Architecture
 
-All 5 phases are complete:
+- Four slots: 0=clock (permanent base), 1=message (one-shot), 2=weather (timed), 3=quotes (timed).
+- Adding a 5th slot requires: `config.h` index, `globals.cpp` array entries, cache struct, fetcher logic, render branch, REST field, NVS persist — all 7 steps must be done together or the slot index will be out-of-bounds.
+- Scheduling (`slotScheduleStartMin/EndMin/DaysMask`) is only wired for slots ≥2. Slots 0 and 1 ignore these arrays by convention.
+
+## Display Render Pipeline
 
 ```
-Phase 1 (clock, NTP, display)            ✓ Done
-Phase 2 (persistence, WiFi AP, boot)     ✓ Done
-Phase 3 (web UI, REST API, date/message)   ✓ Done
-Phase 4 (weather slot — Open-Meteo)      ✓ Done
-Phase 5 (quotes slot — Yahoo Finance)    ✓ Done
+HTTP handler writes globals
+        ↓
+displayTick() called every loop()
+        ↓
+_lastTimeStr diff check → skip if unchanged (expensive MAX7219 write)
+        ↓
+CLOCK_MODE_HHMM:   _display.print(buf, PA_CENTER)
+CLOCK_MODE_HHMMSS: _display.print(HH:MM, PA_LEFT) → _ssLayout() → setColumn() overlay
 ```
 
-Source lives in `smart-matrix-clock-esp32/` subdirectory. Two build systems are available: arduino-cli and PlatformIO (`platformio.ini`). Note: `platformio.ini` references older library versions than arduino-cli; arduino-cli installed versions are the canonical ones.
+- `_display.print()` **clears the entire display** — any overlay via `setColumn()` must happen **after** the print, not before.
+- Two-pass rendering (print then overlay) is the only viable approach for mixed fonts on MD_Parola; there is no multi-region API.
 
-## Data Sources
+## Text Pipeline (message → display)
 
-- **Weather**: Open-Meteo — free, no API key, `http://api.open-meteo.com/v1/forecast?...&current=temperature_2m,weathercode&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=auto`
-- **Quotes**: Yahoo Finance `v8/finance/chart/{symbol}` — per-symbol (not batch). **Not** `v7/finance/quote` (that endpoint 401s without a session cookie). Requires fake desktop User-Agent. `changePercent` is computed client-side as `(last - prevClose) / prevClose * 100`.
+```
+raw UTF-8 from HTTP body
+        ↓
+utf8ToLatin1(src, dst)      ← must be first
+        ↓
+expandIconTags(dst, dst)    ← must be second (tags use ASCII brackets that survive encoding)
+        ↓
+messageText[] (Latin-1)     ← stored here, read by displayTick()
+```
 
-## Slot Model
+Reversing the order corrupts multi-byte characters that happen to contain `[` or `]` bytes.
 
-- Slot 0 = clock (permanent base, never skipped, `slotIntervalMs[0] = 0`)
-- Slot 1 = message (one-shot, `slotIntervalMs[1] = 0`, consumed and cleared after one scroll)
-- Slot 2 = weather (`slotIntervalMs[2]` configurable, runtime default from `globals.cpp`: 60 s)
-- Slot 3 = quotes (`slotIntervalMs[3]` configurable, runtime default from `globals.cpp`: 120 s)
-- Disabled slots → silently skipped with no wait
-- No-cache slots → silently skipped that cycle; cache-stale slots → shown with `*` prefix
+## Language / Localisation
 
-## Language / Locale Design
+- **Two separate systems**: `cfgLanguage` (display locale, validated against `locale_data.cpp` language tables) and `cfgUiLanguage` (web panel language, validated against `_uiLanguages[]` in `persistence.cpp`).
+- Adding a new UI language: 1 entry in `_uiLanguages[]`, 1 I18N dictionary in `web_page.cpp`. No if/else branching.
+- Adding a new display locale: requires entries in `locale_data.cpp` day/month tables AND the IANA→POSIX TZ table if new timezone regions are needed.
 
-There are **two independent language settings**:
-- `cfgLanguage` — on-device clock/date display locale (weekday/month names via `locale_data.cpp`)
-- `cfgUiLanguage` — web panel UI language (I18N dictionaries in `web_page.cpp`)
+## Pending Features (enhancements-plan.md)
 
-Adding a new UI language requires: (1) adding to `_uiLanguages[]` in `persistence.cpp`, (2) adding I18N dictionary in `web_page.cpp`. No other code needs to branch on language.
+| Feature | Sub-Task | Key constraint |
+|---|---|---|
+| HTTP Basic Auth | ST-3 | Must cover panel's own `fetch()` calls — browser sends header automatically; custom headers don't |
+| WiFi scan | ST-5 | `WiFi.scanNetworks()` blocks ~2–3 s — only trigger on explicit button press, never from `loop()` |
+| Auto brightness | ST-6b | New `displayTick()` check; add `cfgNightBrightnessEnabled/Start/End/Level` globals + NVS keys |
+| OTA update | ST-6c | Use `Update.h` (built into ESP32 core); endpoint receives `.bin` via `POST /api/ota`; no external lib needed |
+| Soft reboot | ST-6f | `scheduleRestart(1500)` already exists in `wifi_manager.cpp`; only needs a new route in `web_routes.cpp` |
 
-## Authentication
+## Yahoo Finance
 
-No authentication exists on any endpoint. An X-API-Key mechanism was implemented and removed — the web panel's JS never sent the header, locking the panel out of its own POST routes. HTTP Basic Auth (covering the whole panel) is the planned replacement per `docs/enhancements-plan.md` Sub-Task 3.
+Per-symbol requests only — `v8/finance/chart/{symbol}`. No batch endpoint available without session auth. Each symbol = one HTTP round-trip in `fetcherTick()`.

@@ -48,12 +48,12 @@ MD_MAX72XX::fontType_t PROGMEM _dateSmallFont[] =
   //      OOO
   3, 62, 34, 62,
 
-  // '1'  .O     col0=32(bot), col1=62
-  //       O
-  //       O
-  //       O
-  //      OO
-  2, 32, 62,
+  // '1'  .O.    col0=36(r1+bot), col1=62(all), col2=32(bot)
+  //      OO.    Full 3-col width like every other digit — a 2-col-wide '1'
+  //      .O.    with just a stroke + bottom-left foot read as a stray line
+  //      .O.    at 3x5px, not a recognizable "1".
+  //      OOO
+  3, 36, 62, 32,
 
   // '2'  OOO    col0=58(top+mid+r3+bot), col1=42(top+mid+bot), col2=46(top+r1+mid+bot)
   //        O    Z-shape
