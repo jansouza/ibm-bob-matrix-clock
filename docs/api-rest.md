@@ -16,8 +16,10 @@ Base URL: `http://<DEVICE_IP>`
 | POST | `/api/message` | Send a message to the display |
 | GET | `/api/messages/history` | Last 20 sent messages (timestamp + message) |
 | GET | `/api/timezones` | List of supported timezones |
+| GET | `/api/wifi/scan` | Scan for nearby WiFi networks |
 | POST | `/api/wifi` | Save WiFi credentials and reboot |
 | POST | `/api/preview` | Force-show a slot on the display immediately |
+| POST | `/api/fetch` | Force-refresh a slot's data immediately |
 
 > **Note:** none of the endpoints currently require authentication — anyone on the same network as the device can call them. An API-key mechanism was implemented and later removed because it broke the web interface's own write actions (see [`docs/enhancements-plan.md`](enhancements-plan.md), Sub-Task 3, for the planned replacement).
 
@@ -458,6 +460,72 @@ curl -X POST http://192.168.1.42/api/preview \
 | 400 | `"slot must be 2 (weather) or 3 (quotes)"` | `slot` outside the valid range |
 | 400 | `"Weather slot is disabled"` | `slot: 2` requested but `weather_enabled` is `false` |
 | 400 | `"No weather data cached yet"` | `slot: 2` requested before the first successful fetch |
+
+---
+
+### `GET /api/wifi/scan`
+
+Triggers a WiFi network scan on the device and returns all visible networks sorted by signal strength (strongest first).
+
+> ⚠️ **This call blocks for ~2 seconds** while the ESP32 scans the airwaves. It is intended for user-triggered actions only (the web panel's "Scan networks" button) — do not poll it in a loop.
+
+**Response `200`:**
+
+```json
+[
+  { "ssid": "MyNetwork",   "rssi": -48, "secure": true  },
+  { "ssid": "OpenGuest",   "rssi": -65, "secure": false },
+  { "ssid": "NeighborNet", "rssi": -82, "secure": true  }
+]
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `ssid` | string | Network name (SSID) |
+| `rssi` | int | Signal strength in dBm (less negative = stronger). Typical range: `-30` (excellent) to `-90` (very weak) |
+| `secure` | bool | `true` if the network requires a password; `false` for open networks |
+
+**Example:**
+
+```bash
+curl http://192.168.1.42/api/wifi/scan
+```
+
+---
+
+### `POST /api/fetch`
+
+Forces an immediate re-fetch of a slot's external data, bypassing the configured update interval. The handler only sets a flag; the actual HTTP call happens in the next `fetcherTick()` within a few seconds.
+
+**Content-Type:** `application/json`
+
+#### Body
+
+```json
+{ "slot": 2 }
+```
+
+| Field | Type | Required | Range | Description |
+|---|---|---|---|---|
+| `slot` | int | **yes** | `2` or `3` | Slot to refresh (`2` = Weather, `3` = Quotes) |
+
+The target slot must be enabled, otherwise the request fails.
+
+#### Response `200`:
+
+```json
+{ "ok": true }
+```
+
+#### Possible errors
+
+| Code | Message | Cause |
+|---|---|---|
+| 400 | `"Invalid JSON"` | Request body is not valid JSON |
+| 400 | `"Missing 'slot' field"` | `slot` field absent |
+| 400 | `"slot must be 2 (weather) or 3 (quotes)"` | `slot` outside the valid range |
+| 400 | `"Weather slot is disabled"` | `slot: 2` requested but `weather_enabled` is `false` |
+| 400 | `"Quotes slot is disabled"` | `slot: 3` requested but `quotes_enabled` is `false` |
 
 ---
 

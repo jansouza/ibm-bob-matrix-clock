@@ -503,6 +503,34 @@ static void _handleGetMessagesHistory(AsyncWebServerRequest* req) {
     req->send(200, "application/json", body);
 }
 
+// ─── GET /api/wifi/scan ──────────────────────────────────────────────────────
+// Triggers a synchronous WiFi scan and returns all visible networks as a JSON
+// array of { ssid, rssi, secure } objects, sorted by signal strength (desc).
+// Intended for the web setup panel — user-triggered, so the ~2 s blocking scan
+// is acceptable here (same rationale as the blocking delay in _stationConnect).
+
+static void _handleGetWifiScan(AsyncWebServerRequest* req) {
+    int n = WiFi.scanNetworks(/*async=*/false, /*show_hidden=*/false);
+
+    JsonDocument doc;
+    JsonArray arr = doc.to<JsonArray>();
+
+    if (n > 0) {
+        for (int i = 0; i < n; i++) {
+            JsonObject net = arr.add<JsonObject>();
+            net["ssid"]   = WiFi.SSID(i).c_str();
+            net["rssi"]   = WiFi.RSSI(i);
+            net["secure"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
+        }
+    }
+
+    WiFi.scanDelete();  // free scan result memory
+
+    String body;
+    serializeJson(doc, body);
+    req->send(200, "application/json", body);
+}
+
 // ─── GET /api/timezones ───────────────────────────────────────────────────────
 
 static void _handleGetTimezones(AsyncWebServerRequest* req) {
@@ -622,6 +650,7 @@ void webRoutesBegin(AsyncWebServer& server) {
     server.on("/api/config",          HTTP_GET,  _handleGetConfig);
     server.on("/api/timezones",       HTTP_GET,  _handleGetTimezones);
     server.on("/api/messages/history",  HTTP_GET,  _handleGetMessagesHistory);
+    server.on("/api/wifi/scan",       HTTP_GET,  _handleGetWifiScan);
 
     // Body-receiving handlers (POST)
     server.on("/api/config", HTTP_POST, [](AsyncWebServerRequest* req){},

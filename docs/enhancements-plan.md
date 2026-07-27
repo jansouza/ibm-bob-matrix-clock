@@ -19,6 +19,7 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 | Sub-Task 1 | Configurable HH:MM:SS clock mode (`HH:MM` left-aligned with blinking colon + `SS` in 3×5 small font) |
 | Sub-Task 2 | Icons/symbols in messages (`[heart]`, `[star]`, `[warn]`, etc.) |
 | Sub-Task 4 | Web interface language (EN/PT, persisted on device) |
+| Sub-Task 5 | WiFi network scan (`GET /api/wifi/scan`) — scan button in Network tab, SSID list with signal bars and lock icon, click-to-fill |
 | Sub-Task 6a | Live message preview (icon tags resolved in browser before sending) |
 | Sub-Task 6b | Automatic brightness by time of day (night window, configurable start/end/level) |
 | Sub-Task 6d | Message history (`GET /api/messages/history`, last 20 messages) |
@@ -29,7 +30,6 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 | Sub-task | Feature | Urgency |
 |---|---|---|
 | Sub-Task 3 | Web interface password (HTTP Basic Auth) | 🟢 Low |
-| Sub-Task 5 | WiFi network scan (`GET /api/wifi/scan`) | 🟢 Low |
 | Sub-Task 6c | OTA firmware update (`POST /api/ota`) | 🟡 Medium |
 | Sub-Task 6f | Soft reboot via panel (`POST /api/restart`) | 🟡 Medium |
 
@@ -227,7 +227,9 @@ Add a language selector (EN / PT, extensible to more languages later) in the web
 
 ## Sub-Task 5 — WiFi network scan in the web interface (Low urgency)
 
-**Status:** `[ ] pending`
+**Status:** `[x] done`
+
+> **Implementation note:** the scan runs synchronously (`WiFi.scanNetworks(false)`) inside `_handleGetWifiScan()` in `web_routes.cpp` — acceptable since it is user-triggered only and follows the same blocking-in-handler rationale as `_stationConnect()`. The Network tab now has a "Scan networks" button next to the SSID field; results are sorted by RSSI descending and rendered as clickable rows showing lock/open icon, SSID name and a 4-bar signal indicator with dBm value. Clicking a row fills the SSID field and focuses the password input. `WiFi.scanDelete()` is called after each scan to free driver memory. Fully localised in EN and PT via the `I18N` dictionary.
 
 ### Intent
 
@@ -245,9 +247,9 @@ The scan is synchronous (blocks ~2–3 s) and must only occur when explicitly tr
 
 ### Todo List
 
-1. **`wifi_manager.h/cpp`** — Add function `wifiScan(JsonArray& results)` that calls `WiFi.scanNetworks()` (blocking, ~2 s), iterates the results and populates the `JsonArray` with `{ssid, rssi, secure}` objects. Sort by descending RSSI.
-2. **`web_routes.cpp`** — Register `GET /api/wifi/scan`: calls `wifiScan()`, serialises JSON and responds. Protect with `_checkBasicAuth()` when that feature is implemented (Sub-Task 3); for now, open route.
-3. **`web_page.h`** — In the Network tab: add "Scan networks" button; on click, call `fetch('/api/wifi/scan')`, render results list; on item click, fill the SSID field.
+1. ~~**`wifi_manager.h/cpp`** — Add function `wifiScan(JsonArray& results)`~~ — scan implemented inline in the route handler (`_handleGetWifiScan`) in `web_routes.cpp` to keep `wifi_manager` scope-limited to connection management.
+2. **`web_routes.cpp`** ✅ — `GET /api/wifi/scan` registered; handler calls `WiFi.scanNetworks()`, builds JSON array `[{ssid, rssi, secure}]`, calls `WiFi.scanDelete()`, responds.
+3. **`web_page.h`** ✅ — Network tab updated: "Scan networks" button inline with SSID field; `runWifiScan()` renders sorted results; click-to-fill; I18N keys in EN + PT.
 
 ### Relevant Context
 

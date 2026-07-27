@@ -495,9 +495,14 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
       <h2 data-i18n="network.newWifi">New WiFi network</h2>
       <div class="field">
         <label>SSID</label>
-        <input id="wifi-ssid" type="text" maxlength="32" autocomplete="off"/>
+        <div style="display:flex;gap:8px">
+          <input id="wifi-ssid" type="text" maxlength="32" autocomplete="off" style="flex:1"/>
+          <button class="btn btn-secondary" id="btn-wifi-scan" data-i18n="network.scanNetworks">Scan networks</button>
+        </div>
       </div>
-      <div class="field">
+      <div id="wifi-scan-status" style="font-size:12px;color:#8b949e;margin-top:4px;display:none"></div>
+      <div id="wifi-scan-results" style="margin-top:6px;display:flex;flex-direction:column;gap:4px"></div>
+      <div class="field" style="margin-top:8px">
         <label data-i18n="network.password">Password</label>
         <input id="wifi-pass" type="password" maxlength="64" autocomplete="new-password"/>
       </div>
@@ -597,6 +602,13 @@ var I18N = {
     'network.newWifi': 'New WiFi network',
     'network.password': 'Password',
     'network.saveAndRestart': 'Save and restart',
+    'network.scanNetworks': 'Scan networks',
+    'network.scanning': 'Scanning...',
+    'network.scanError': 'Scan failed',
+    'network.noNetworks': 'No networks found',
+    'network.signalStrength': 'Signal',
+    'network.secured': '&#128274;',
+    'network.open': '&#128275;',
     'common.settings': 'Settings',
     'common.updateInterval': 'Update interval (minutes)',
     'common.displayInterval': 'Display time (seconds)',
@@ -696,6 +708,13 @@ var I18N = {
     'network.newWifi': 'Nova rede WiFi',
     'network.password': 'Senha',
     'network.saveAndRestart': 'Salvar e reiniciar',
+    'network.scanNetworks': 'Varrer redes',
+    'network.scanning': 'Varrendo...',
+    'network.scanError': 'Falha na varredura',
+    'network.noNetworks': 'Nenhuma rede encontrada',
+    'network.signalStrength': 'Sinal',
+    'network.secured': '&#128274;',
+    'network.open': '&#128275;',
     'common.settings': 'Configura&#231;&#245;es',
     'common.updateInterval': 'Intervalo de atualiza&#231;&#227;o (minutos)',
     'common.displayInterval': 'Tempo de exibi&#231;&#227;o (segundos)',
@@ -1344,6 +1363,64 @@ document.getElementById('btn-save-quotes').addEventListener('click', function() 
     showToast(r.ok ? t('toast.saved') : (t('toast.error') + (r.error || '?')));
   }).catch(function(){ showToast(t('toast.networkError')); });
 });
+
+// ── WiFi network scan ────────────────────────────────────────────────────────
+// Calls GET /api/wifi/scan (blocking ~2 s on the device), then renders a list
+// of visible networks. Clicking a network row fills the SSID field and focuses
+// the password input so the user can immediately type the password.
+function rssiToBar(rssi) {
+  // Returns a 1–4 bar indicator based on RSSI dBm value.
+  if (rssi >= -55) return '▂▄▆█';
+  if (rssi >= -67) return '▂▄▆\u200B';
+  if (rssi >= -78) return '▂▄\u200B\u200B';
+  return '▂\u200B\u200B\u200B';
+}
+function runWifiScan() {
+  var statusEl  = document.getElementById('wifi-scan-status');
+  var resultsEl = document.getElementById('wifi-scan-results');
+  var btn       = document.getElementById('btn-wifi-scan');
+
+  resultsEl.innerHTML = '';
+  statusEl.textContent = t('network.scanning');
+  statusEl.style.display = '';
+  btn.disabled = true;
+
+  fetch('/api/wifi/scan').then(function(r) { return r.json(); }).then(function(nets) {
+    btn.disabled = false;
+    if (!nets || nets.length === 0) {
+      statusEl.textContent = t('network.noNetworks');
+      return;
+    }
+    statusEl.style.display = 'none';
+    // Sort strongest first
+    nets.sort(function(a, b) { return b.rssi - a.rssi; });
+    nets.forEach(function(net) {
+      var row = document.createElement('button');
+      row.className = 'btn btn-secondary';
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;text-align:left;width:100%;padding:6px 10px;gap:8px';
+      var nameSpan = document.createElement('span');
+      nameSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      nameSpan.textContent = (net.secure ? '\uD83D\uDD12 ' : '\uD83D\uDD13 ') + net.ssid;
+      var sigSpan = document.createElement('span');
+      sigSpan.style.cssText = 'font-family:monospace;font-size:12px;color:#8b949e;flex-shrink:0';
+      sigSpan.textContent = rssiToBar(net.rssi) + ' ' + net.rssi + ' dBm';
+      row.appendChild(nameSpan);
+      row.appendChild(sigSpan);
+      row.addEventListener('click', function() {
+        document.getElementById('wifi-ssid').value = net.ssid;
+        resultsEl.innerHTML = '';
+        statusEl.style.display = 'none';
+        document.getElementById('wifi-pass').focus();
+      });
+      resultsEl.appendChild(row);
+    });
+  }).catch(function() {
+    btn.disabled = false;
+    statusEl.textContent = t('network.scanError');
+    statusEl.style.display = '';
+  });
+}
+document.getElementById('btn-wifi-scan').addEventListener('click', runWifiScan);
 
 // ── Save WiFi ────────────────────────────────────────────────────────────────
 document.getElementById('btn-save-wifi').addEventListener('click', function() {

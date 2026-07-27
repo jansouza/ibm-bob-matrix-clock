@@ -152,10 +152,13 @@ No authentication is required on any endpoint in this version — anyone on the 
 | `GET` | `/api/status` | Current time, active slot, NTP synced, SSID, IP |
 | `GET` | `/api/config` | All current settings (JSON) |
 | `GET` | `/api/timezones` | List of available IANA timezones |
+| `GET` | `/api/wifi/scan` | Scan for nearby WiFi networks (SSID, RSSI, secure flag) |
+| `GET` | `/api/messages/history` | Last 20 messages sent to the display |
 | `POST` | `/api/config` | Update settings |
 | `POST` | `/api/message` | Send a message to the display |
 | `POST` | `/api/wifi` | Save new WiFi credentials and reboot |
 | `POST` | `/api/preview` | Force-show a slot on the display immediately |
+| `POST` | `/api/fetch` | Force-refresh a slot's external data immediately |
 
 **Example — send message:**
 ```bash
@@ -192,7 +195,7 @@ Beyond the 5 core phases, [`docs/enhancements-plan.md`](docs/enhancements-plan.m
 | F2 | Icons/symbols in messages | ✅ Done |
 | F3 | Password for the web interface (HTTP Basic Auth) | 🔲 Pending |
 | F4 | Web interface language (pt/en in browser) | ✅ Done |
-| F5 | WiFi network scan in the web interface | 🔲 Pending |
+| F5 | WiFi network scan in the web interface | ✅ Done |
 | F6a | Live message preview | ✅ Done |
 | F6b | Automatic brightness by time of day | ✅ Done |
 | F6c | OTA firmware update | 🔲 Pending |

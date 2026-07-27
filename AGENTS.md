@@ -27,6 +27,19 @@ pio run -t upload  # upload
 pio device monitor # serial monitor
 ```
 
+## Documentation Rule
+
+**After every implementation, always update the documentation** to reflect the changes before reporting completion. This includes:
+
+1. **`AGENTS.md`** — update architecture notes, API sections, or gotchas affected by the change.
+2. **`README.md`** — update the REST API table, enhancements status table and features list as applicable.
+3. **`docs/api-rest.md`** — add or update endpoint documentation for any new or modified route.
+4. **`docs/enhancements-plan.md`** — mark the corresponding sub-task as `[x] done` and move it from the "Pending" table to the "Implemented" table.
+
+Documentation updates are part of the definition of done — a task is not complete until both the code and the docs are in sync.
+
+---
+
 Always run **both** validation steps after any code change before reporting completion:
 
 ```bash
