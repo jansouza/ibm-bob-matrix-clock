@@ -31,7 +31,7 @@ static MD_Parola _display(DISPLAY_HARDWARE, PIN_DATA, PIN_CLK, PIN_CS, NUM_MODUL
 
 static uint32_t _lastBlink       = 0;
 static bool     _colonVisible    = true;
-static char     _lastTimeStr[8]  = "";   // last rendered string (avoid redundant writes)
+static char     _lastTimeStr[10] = "";   // last rendered string (avoid redundant writes)
 
 // Scroll state
 static bool     _scrolling        = false;  // true while a scroll animation is running
@@ -571,32 +571,58 @@ void displayTick() {
     _slotRotationTick();
     if (_scrolling) return;   // rotation just started a scroll — done this tick
 
-    // ── Colon blink every BLINK_INTERVAL_MS ───────────────────────────────────
-    if (now - _lastBlink >= BLINK_INTERVAL_MS) {
-        _lastBlink    = now;
-        _colonVisible = !_colonVisible;
+    if (cfgClockMode == CLOCK_MODE_HHMMSS) {
+        // ── Seconds mode: update every second, colon always visible ───────────
+        if (now - _lastBlink >= 1000UL) {
+            _lastBlink = now;
 
-        char buf[8];
-
-        if (!ntpSynced) {
-            snprintf(buf, sizeof(buf), "%s", _colonVisible ? "--:--" : "-- --");
-        } else {
-            struct tm timeinfo;
-            if (!getLocalTime(&timeinfo)) {
-                snprintf(buf, sizeof(buf), "--:--");
+            char buf[10];
+            if (!ntpSynced) {
+                snprintf(buf, sizeof(buf), "--:--:--");
             } else {
-                snprintf(buf, sizeof(buf), _colonVisible ? "%02d:%02d" : "%02d %02d",
-                         timeinfo.tm_hour, timeinfo.tm_min);
+                struct tm timeinfo;
+                if (!getLocalTime(&timeinfo)) {
+                    snprintf(buf, sizeof(buf), "--:--:--");
+                } else {
+                    snprintf(buf, sizeof(buf), "%02d:%02d:%02d",
+                             timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+                }
+            }
+
+            if (strcmp(buf, _lastTimeStr) != 0) {
+                strncpy(_lastTimeStr, buf, sizeof(_lastTimeStr) - 1);
+                _lastTimeStr[sizeof(_lastTimeStr) - 1] = '\0';
+                _display.setFont(nullptr);
+                _display.setTextAlignment(PA_CENTER);
+                _display.print(buf);
             }
         }
+    } else {
+        // ── HH:MM mode: colon blinks every BLINK_INTERVAL_MS ─────────────────
+        if (now - _lastBlink >= BLINK_INTERVAL_MS) {
+            _lastBlink    = now;
+            _colonVisible = !_colonVisible;
 
-        // Only write to display when the string actually changes
-        if (strcmp(buf, _lastTimeStr) != 0) {
-            strncpy(_lastTimeStr, buf, sizeof(_lastTimeStr) - 1);
-            _lastTimeStr[sizeof(_lastTimeStr) - 1] = '\0';
-            _display.setFont(nullptr);   // ensure system font is active
-            _display.setTextAlignment(PA_CENTER);
-            _display.print(buf);
+            char buf[10];
+            if (!ntpSynced) {
+                snprintf(buf, sizeof(buf), "%s", _colonVisible ? "--:--" : "-- --");
+            } else {
+                struct tm timeinfo;
+                if (!getLocalTime(&timeinfo)) {
+                    snprintf(buf, sizeof(buf), "--:--");
+                } else {
+                    snprintf(buf, sizeof(buf), _colonVisible ? "%02d:%02d" : "%02d %02d",
+                             timeinfo.tm_hour, timeinfo.tm_min);
+                }
+            }
+
+            if (strcmp(buf, _lastTimeStr) != 0) {
+                strncpy(_lastTimeStr, buf, sizeof(_lastTimeStr) - 1);
+                _lastTimeStr[sizeof(_lastTimeStr) - 1] = '\0';
+                _display.setFont(nullptr);
+                _display.setTextAlignment(PA_CENTER);
+                _display.print(buf);
+            }
         }
     }
 }

@@ -77,6 +77,9 @@ void loadConfig() {
         cfgUiLanguage[UI_LANG_CODE_MAX - 1] = '\0';
     }
 
+    cfgClockMode = _prefs.getUChar(NVS_KEY_CLOCK_MODE, CLOCK_MODE_DEFAULT);
+    if (cfgClockMode > CLOCK_MODE_HHMMSS) cfgClockMode = CLOCK_MODE_DEFAULT;
+
     // ── Weather (Phase 4) ──────────────────────────────────────────────────────
     slotEnabled[2]     = _prefs.getBool(NVS_KEY_WEATHER_EN,   false);
     cfgWeatherUpdateMs = _prefs.getUInt(NVS_KEY_WEATHER_UPMS, WEATHER_UPDATE_DEFAULT_MS);
@@ -127,6 +130,7 @@ void saveConfig() {
     _prefs.putBool(NVS_KEY_DATE_EN,     cfgDateEnabled);
 
     _prefs.putString(NVS_KEY_UI_LANGUAGE, cfgUiLanguage);
+    _prefs.putUChar(NVS_KEY_CLOCK_MODE,   cfgClockMode);
 
     // ── Weather (Phase 4) ──────────────────────────────────────────────────────
     _prefs.putBool(NVS_KEY_WEATHER_EN,   slotEnabled[2]);
@@ -193,6 +197,7 @@ void factoryReset() {
 
     strncpy(cfgUiLanguage, UI_LANG_DEFAULT, UI_LANG_CODE_MAX - 1);
     cfgUiLanguage[UI_LANG_CODE_MAX - 1] = '\0';
+    cfgClockMode = CLOCK_MODE_DEFAULT;
 
     // ── Weather (Phase 4) ──────────────────────────────────────────────────────
     cfgWeatherLat      = WEATHER_LAT_DEFAULT;

@@ -72,6 +72,7 @@ extern char     cfgWifiPass[];        // stored WiFi password
 extern uint32_t cfgDateIntervalMs;    // how often date fires (ms); 0 = disabled
 extern bool     cfgDateEnabled;       // true = show date periodically
 extern char     cfgUiLanguage[];      // web panel UI language (e.g. "en", "pt") — independent of cfgLocale
+extern uint8_t  cfgClockMode;         // CLOCK_MODE_HHMM or CLOCK_MODE_HHMMSS
 
 // ─── Weather configuration (Phase 4) ──────────────────────────────────────────
 extern float    cfgWeatherLat;        // latitude

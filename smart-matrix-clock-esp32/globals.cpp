@@ -49,6 +49,7 @@ char     cfgWifiPass[WIFI_PASS_MAX]     = {0};
 uint32_t cfgDateIntervalMs              = DATE_INTERVAL_DEFAULT_MS;
 bool     cfgDateEnabled                 = true;
 char     cfgUiLanguage[UI_LANG_CODE_MAX] = UI_LANG_DEFAULT;
+uint8_t  cfgClockMode                   = CLOCK_MODE_DEFAULT;
 
 // ─── Weather configuration (Phase 4) ──────────────────────────────────────────
 float    cfgWeatherLat     = WEATHER_LAT_DEFAULT;

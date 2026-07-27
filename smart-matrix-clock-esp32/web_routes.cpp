@@ -132,6 +132,7 @@ static void _handleGetConfig(AsyncWebServerRequest* req) {
     doc["date_interval_ms"] = cfgDateIntervalMs;
     doc["date_enabled"]     = cfgDateEnabled;
     doc["ui_language"]      = cfgUiLanguage;
+    doc["clock_mode"]       = cfgClockMode;
 
     doc["weather_enabled"]    = slotEnabled[2];
     doc["weather_update_ms"]  = cfgWeatherUpdateMs;
@@ -244,6 +245,14 @@ static void _handlePostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t 
         }
         strncpy(cfgUiLanguage, lang, UI_LANG_CODE_MAX - 1);
         cfgUiLanguage[UI_LANG_CODE_MAX - 1] = '\0';
+        changed = true;
+    }
+
+    // ── clock_mode ────────────────────────────────────────────────────────────
+    if (doc["clock_mode"].is<int>()) {
+        int v = doc["clock_mode"].as<int>();
+        if (v < 0 || v > 1) { _sendError(req, 400, "clock_mode must be 0 (HH:MM) or 1 (HH:MM:SS)"); return; }
+        cfgClockMode = (uint8_t)v;
         changed = true;
     }
 

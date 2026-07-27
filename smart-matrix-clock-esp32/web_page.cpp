@@ -213,6 +213,15 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
     </div>
 
     <div class="card">
+      <h2 data-i18n="clock.clockMode">Clock mode</h2>
+      <div class="toggle-row" style="margin-bottom:10px">
+        <span style="font-size:13px;font-weight:500;color:#c9d1d9" data-i18n="clock.showSeconds">Show seconds (HH:MM:SS)</span>
+        <label class="toggle"><input type="checkbox" id="cfg-clock-mode"/><span class="slider-toggle"></span></label>
+      </div>
+      <div class="hint" data-i18n="clock.showSecondsHint">When enabled, the clock displays HH:MM:SS and updates every second. The colon no longer blinks.</div>
+    </div>
+
+    <div class="card">
       <h2 data-i18n="clock.date">Date</h2>
       <div class="toggle-row" style="margin-bottom:10px">
         <span style="font-size:13px;font-weight:500;color:#c9d1d9" data-i18n="clock.showDatePeriodically">Show date periodically</span>
@@ -498,6 +507,9 @@ var I18N = {
     'clock.locale': 'Locale (date, numbers, quotes)',
     'clock.ntpServer': 'NTP server',
     'clock.date': 'Date',
+    'clock.clockMode': 'Clock mode',
+    'clock.showSeconds': 'Show seconds (HH:MM:SS)',
+    'clock.showSecondsHint': 'When enabled, the clock displays HH:MM:SS and updates every second. The colon no longer blinks.',
     'clock.showDatePeriodically': 'Show date periodically',
     'clock.dateInterval': 'Display interval (seconds)',
     'clock.display': 'Display',
@@ -590,6 +602,9 @@ var I18N = {
     'clock.locale': 'Idioma (data, n&#250;meros, cota&#231;&#245;es)',
     'clock.ntpServer': 'Servidor NTP',
     'clock.date': 'Data',
+    'clock.clockMode': 'Modo do rel&#243;gio',
+    'clock.showSeconds': 'Mostrar segundos (HH:MM:SS)',
+    'clock.showSecondsHint': 'Quando ativado, o rel&#243;gio exibe HH:MM:SS e atualiza a cada segundo. Os dois-pontos n&#227;o piscam.',
     'clock.showDatePeriodically': 'Exibir data periodicamente',
     'clock.dateInterval': 'Intervalo de exibi&#231;&#227;o (segundos)',
     'clock.display': 'Display',
@@ -823,6 +838,8 @@ function loadConfig() {
     setVal('cfg-ntp-server', c.ntp_server);
     setVal('cfg-date-interval', Math.round((c.date_interval_ms || 30000) / 1000));
 
+    setChecked('cfg-clock-mode', (c.clock_mode || 0) === 1);
+
     var dateEn = c.date_enabled !== false;
     setChecked('cfg-date-en', dateEn);
     document.getElementById('date-options').style.opacity = dateEn ? '1' : '0.4';
@@ -916,6 +933,7 @@ function saveClockConfig() {
     ntp_server: val('cfg-ntp-server'),
     date_interval_ms: parseInt(val('cfg-date-interval'), 10) * 1000,
     date_enabled: checked('cfg-date-en'),
+    clock_mode: checked('cfg-clock-mode') ? 1 : 0,
     brightness: parseInt(val('cfg-brightness'), 10),
     scroll_speed_ms: parseInt(val('cfg-scroll-speed'), 10)
   };

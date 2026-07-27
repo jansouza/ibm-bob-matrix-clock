@@ -73,6 +73,13 @@
 #define DATE_INTERVAL_MIN_MS       5000UL   // minimum 5 s
 #define DATE_INTERVAL_MAX_MS     300000UL   // maximum 5 min
 
+// ─── Clock display mode ────────────────────────────────────────────────────────
+#define CLOCK_MODE_HHMM           0   // HH:MM  (default, colon blinks)
+#define CLOCK_MODE_HHMMSS         1   // HH:MM:SS  (seconds visible, updates every second)
+
+#define CLOCK_MODE_DEFAULT        CLOCK_MODE_HHMM
+#define NVS_KEY_CLOCK_MODE        "clock_mode"
+
 // ─── Message display mode ──────────────────────────────────────────────────────
 #define MESSAGE_MODE_SCROLL       0   // scroll text left (original behaviour)
 #define MESSAGE_MODE_BLINK        1   // blink text on/off for messageDurationMs
