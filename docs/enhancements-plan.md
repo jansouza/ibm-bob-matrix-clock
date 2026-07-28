@@ -38,6 +38,7 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 | Sub-Task 10 | MQTT push messages | 🟢 Low | [#14](https://github.com/jansouza/ibm-bob-matrix-clock/issues/14) |
 | Sub-Task 11 | Display test mode (`POST /api/test`) | 🟢 Low | [#15](https://github.com/jansouza/ibm-bob-matrix-clock/issues/15) |
 | Sub-Task 12 | Message queue / playlist | 🟢 Low | [#16](https://github.com/jansouza/ibm-bob-matrix-clock/issues/16) |
+| Sub-Task 13 | Version control & GitHub Actions release pipeline (version part only — `FIRMWARE_VERSION`, `/api/status` field, web panel footer) | 🟡 Medium | [#17](https://github.com/jansouza/ibm-bob-matrix-clock/issues/17) |
 
 ---
 
@@ -49,13 +50,13 @@ Code-level issues found during review — bugs, robustness gaps, and cleanups th
 
 | # | Severity | Summary | File |
 |---|---|---|---|
-| C1 | 🔴 Bug Risk | `applyTimezone()` UB when IANA lookup returns `nullptr` twice | `persistence.cpp` |
-| C2 | 🟡 Bug Risk | `_slotInSchedule()` uses epoch `tm_wday` before NTP syncs | `display.cpp` |
+| C1 | ⚪ Not an issue | ~~`applyTimezone()` UB when IANA lookup returns `nullptr` twice~~ ✅ invalid — stale comment fixed | `persistence.cpp` |
+| C2 | 🟡 Bug Risk | ~~`_slotInSchedule()` uses epoch `tm_wday` before NTP syncs~~ ✅ fixed | `display.cpp` |
 | C3 | 🟢 Cleanup | `slotEnabled[2/3]` written twice in `loadConfig()` — generic keys redundant | `persistence.cpp` |
-| C4 | 🟡 Robustness | `_fetchOneQuote()` — no guard for empty `getString()` on heap OOM | `data_fetcher.cpp` |
+| C4 | 🟡 Robustness | ~~`_fetchOneQuote()` — no guard for empty `getString()` on heap OOM~~ ✅ fixed (both fetchers) | `data_fetcher.cpp` |
 | C5 | 🟡 Robustness | Factory reset BOOT button has no debounce — USB DTR can wipe settings | `.ino · setup()` |
 | C6 | 🟢 Cleanup | Slot indices `2`/`3` hardcoded everywhere — add `SLOT_WEATHER`/`SLOT_QUOTES` constants | `config.h` |
-| C7 | 🟢 Cleanup | `_fetchWeather()` URL builder duplicated for °C/°F — use single `snprintf` | `data_fetcher.cpp` |
+| C7 | 🟢 Cleanup | ~~`_fetchWeather()` URL builder duplicated for °C/°F — use single `snprintf`~~ ✅ fixed | `data_fetcher.cpp` |
 
 ---
 
@@ -530,3 +531,48 @@ Currently only the most recent message is stored — sending a second one overwr
 4. **`web_routes.cpp`** — Update `POST /api/message` to enqueue; add `GET /api/messages/queue` and `POST /api/messages/clear`.
 5. **`web_page.h`** — Show queue length in the Message tab.
 
+
+## Sub-Task 13 — Version control & GitHub Actions release pipeline [#17](https://github.com/jansouza/ibm-bob-matrix-clock/issues/17)
+
+**Status:** `[~] partial` — version string (items 1–4) implemented; GitHub Actions workflows (items 5–7) pending
+
+### Intent
+
+The firmware has no formal version identifier today — there is no `VERSION` constant in the source, no git tag convention, and no automated build/release artefact. This sub-task introduces:
+
+1. A **semantic version string** embedded in the firmware (`FIRMWARE_VERSION` constant).
+2. A **GitHub Actions CI workflow** that compiles the firmware on every push/PR (smoke test — no device required).
+3. A **GitHub Actions release workflow** triggered by a `v*` tag that compiles the firmware, produces a `.bin` artefact, and publishes a GitHub Release with the binary attached.
+
+### Design decisions
+
+- Version follows **SemVer** (`MAJOR.MINOR.PATCH`), declared once in `config.h` as `#define FIRMWARE_VERSION "1.0.0"`.
+- The version is exposed via `GET /api/status` (new field `firmware_version`) so the web panel can display it and OTA (Sub-Task 6c) can compare installed vs available version.
+- The CI workflow uses the official `arduino/compile-sketches` GitHub Action with the `esp32:esp32:esp32` FQBN — same board as the local `arduino-cli` command.
+- The release workflow runs **only** when a tag matching `v[0-9]*` is pushed; it extracts the version from the tag and asserts it matches `FIRMWARE_VERSION` in `config.h` to prevent accidental mismatches.
+- Compiled `.bin` is uploaded as a release asset under the name `smart-matrix-clock-esp32-<version>.bin`.
+
+### Expected Outcomes
+
+- Every push to `main` or any PR triggers the CI compile check; a failing build blocks merge.
+- Tagging `v1.2.3` → GitHub Release created automatically with the binary attached and release notes pre-populated from the tag annotation.
+- `GET /api/status` JSON includes `"firmware_version": "1.2.3"`.
+- Web panel footer (or About section) displays the firmware version string.
+
+### Todo List
+
+1. [x] **`config.h`** — Add `#define FIRMWARE_VERSION "1.0.0"` near the top.
+2. [x] **`globals.h/cpp`** — No change needed; version is a compile-time constant.
+3. [x] **`web_routes.cpp`** — In `_handleGetStatus()`, add `"firmware_version"` field from `FIRMWARE_VERSION`.
+4. [x] **`web_page.h/cpp`** — Add version string to the panel footer (small muted text).
+5. [ ] **`.github/workflows/ci.yml`** — Workflow: triggers on `push` and `pull_request` to `main`; installs `esp32:esp32:esp32` core + required libraries; runs `arduino-cli compile --fqbn esp32:esp32:esp32 smart-matrix-clock-esp32`; reports pass/fail.
+6. [ ] **`.github/workflows/release.yml`** — Workflow: triggers on `push` of tags matching `v[0-9]*`; compiles with `--output-dir build/`; extracts `FIRMWARE_VERSION` from `config.h` and asserts it equals the tag (strip leading `v`); creates a GitHub Release via `softprops/action-gh-release` with the `.bin` file attached.
+7. [ ] **`README.md`** — Add CI badge and document the release tagging procedure.
+
+### Relevant Context
+
+- Build command (no device): `arduino-cli compile --fqbn esp32:esp32:esp32 smart-matrix-clock-esp32`
+- Required libraries already installed locally: `MD_MAX72XX`, `MD_Parola`, `ESP Async WebServer`, `AsyncTCP`, `ArduinoJson`.
+- The `arduino/compile-sketches` action handles library and core installation declaratively via its `libraries` and `fqbn` inputs — no custom shell bootstrap needed.
+- Sub-Task 6c (OTA) will consume `FIRMWARE_VERSION` to compare running firmware against an available update — implement this sub-task first so the field is already in place when OTA is built.
+- Tag format: `v1.0.0`, `v1.1.0-rc1` — the release workflow should strip the leading `v` before comparing against `FIRMWARE_VERSION`.

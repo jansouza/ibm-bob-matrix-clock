@@ -10,13 +10,13 @@ Reference: [`docs/enhancements-plan.md`](enhancements-plan.md) | [`docs/project-
 
 | # | Severity | File | GitHub Issue | Status |
 |---|---|---|---|---|
-| C1 | ⚪ Not an issue | `persistence.cpp · applyTimezone()` | [#1](https://github.com/jansouza/ibm-bob-matrix-clock/issues/1) | `[x] invalid — closed` |
-| C2 | 🟡 Bug Risk | `display.cpp · _slotInSchedule()` | [#2](https://github.com/jansouza/ibm-bob-matrix-clock/issues/2) | `[ ] pending` |
+| C1 | ⚪ Not an issue | `persistence.cpp · applyTimezone()` | [#1](https://github.com/jansouza/ibm-bob-matrix-clock/issues/1) | `[x] invalid — stale comment fixed` |
+| C2 | 🟡 Bug Risk | `display.cpp · _slotInSchedule()` | [#2](https://github.com/jansouza/ibm-bob-matrix-clock/issues/2) | `[x] done` |
 | C3 | 🟢 Cleanup | `persistence.cpp · loadConfig()` | [#3](https://github.com/jansouza/ibm-bob-matrix-clock/issues/3) | `[ ] pending` |
-| C4 | 🟡 Robustness | `data_fetcher.cpp · _fetchOneQuote()` + `_fetchWeather()` | [#4](https://github.com/jansouza/ibm-bob-matrix-clock/issues/4) | `[ ] pending` |
+| C4 | 🟡 Robustness | `data_fetcher.cpp · _fetchOneQuote()` + `_fetchWeather()` | [#4](https://github.com/jansouza/ibm-bob-matrix-clock/issues/4) | `[x] done` |
 | C5 | 🟡 Robustness | `smart-matrix-clock-esp32.ino · setup()` | [#5](https://github.com/jansouza/ibm-bob-matrix-clock/issues/5) | `[ ] pending` |
 | C6 | 🟢 Cleanup | `config.h` | [#6](https://github.com/jansouza/ibm-bob-matrix-clock/issues/6) | `[ ] pending` |
-| C7 | 🟢 Cleanup | `data_fetcher.cpp · _fetchWeather()` | [#7](https://github.com/jansouza/ibm-bob-matrix-clock/issues/7) | `[ ] pending` |
+| C7 | 🟢 Cleanup | `data_fetcher.cpp · _fetchWeather()` | [#7](https://github.com/jansouza/ibm-bob-matrix-clock/issues/7) | `[x] done` |
 | C8 | 🟢 Cleanup | `config.h · BOOT_HOLD_MS` | — | `[ ] pending` |
 | C9 | 🟢 Cleanup | `config.h · NVS_KEY_MESSAGE_MODE/DUR` | — | `[ ] pending` |
 
@@ -28,6 +28,7 @@ Verified against the current tree on 2026-07-27. C1 was re-checked and found alr
 
 **Severity:** ⚪ Not an issue (re-verified 2026-07-27)
 **File:** `persistence.cpp · applyTimezone()`
+**Status:** ✅ Stale comment fixed — `// Fall back to Sao Paulo POSIX if unknown` → `// Fall back to UTC if unknown timezone`.
 
 ### Original claim
 
@@ -69,7 +70,7 @@ Close #1 as invalid — either the underlying table already had the `"UTC"` entr
 
 **Severity:** 🟡 Bug Risk
 **File:** `display.cpp · _slotInSchedule()`
-**Status:** Confirmed present, `display.cpp` lines 456–459.
+**Status:** ✅ Fixed — `display.cpp` line 457 (`if (!ntpSynced) return false;` added).
 
 ### Problem
 
@@ -133,7 +134,7 @@ Remove the generic `NVS_KEY_SLOT2_EN` / `NVS_KEY_SLOT3_EN` read/write for indice
 
 **Severity:** 🟡 Robustness
 **File:** `data_fetcher.cpp · _fetchOneQuote()` **and** `_fetchWeather()`
-**Status:** Confirmed present in `_fetchOneQuote()`; also found in `_fetchWeather()`, which was not covered by the original issue.
+**Status:** ✅ Fixed — `body.length() == 0` guard added in both `_fetchWeather()` and `_fetchOneQuote()` before `deserializeJson`.
 
 ### Problem
 
@@ -254,7 +255,7 @@ Zero runtime change; purely improves readability and makes future slot additions
 
 **Severity:** 🟢 Cleanup
 **File:** `data_fetcher.cpp · _fetchWeather()`
-**Status:** Confirmed present, `data_fetcher.cpp:48-65`.
+**Status:** Fixed — single `snprintf` with conditional `%s` suffix replaces the duplicated blocks.
 
 ### Problem
 

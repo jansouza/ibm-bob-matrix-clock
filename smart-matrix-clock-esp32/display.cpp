@@ -454,6 +454,7 @@ static bool _startSlotScroll(uint8_t slot) {
 // start > end wraps past midnight (e.g. 22:00-06:00 covers the overnight window).
 // slotScheduleDaysMask[slot] bit N (tm_wday: 0=Sunday..6=Saturday) gates the weekday.
 static bool _slotInSchedule(uint8_t slot) {
+    if (!ntpSynced) return false;   // epoch time gives wrong tm_wday
     time_t now = time(nullptr);
     struct tm t;
     localtime_r(&now, &t);

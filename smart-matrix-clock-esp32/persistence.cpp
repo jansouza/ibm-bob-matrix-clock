@@ -172,7 +172,7 @@ void saveConfig() {
 void applyTimezone() {
     const char* posix = ianaToPostfix(cfgTimezone);
     if (posix == nullptr) {
-        // Fall back to Sao Paulo POSIX if unknown
+        // Fall back to UTC if unknown timezone
         posix = ianaToPostfix(NTP_TIMEZONE_DEFAULT);
     }
     setenv("TZ", posix, 1);

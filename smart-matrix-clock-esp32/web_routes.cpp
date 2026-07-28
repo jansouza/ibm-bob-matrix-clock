@@ -59,12 +59,13 @@ static void _handleRoot(AsyncWebServerRequest* req) {
 static void _handleGetStatus(AsyncWebServerRequest* req) {
     JsonDocument doc;
 
-    doc["ntp_synced"]  = ntpSynced;
-    doc["active_slot"] = activeSlot;
-    doc["ssid"]        = WiFi.status() == WL_CONNECTED ? WiFi.SSID().c_str() : "";
-    doc["ip"]          = WiFi.status() == WL_CONNECTED
-                             ? WiFi.localIP().toString().c_str()
-                             : WiFi.softAPIP().toString().c_str();
+    doc["ntp_synced"]       = ntpSynced;
+    doc["active_slot"]      = activeSlot;
+    doc["firmware_version"] = FIRMWARE_VERSION;
+    doc["ssid"]             = WiFi.status() == WL_CONNECTED ? WiFi.SSID().c_str() : "";
+    doc["ip"]               = WiFi.status() == WL_CONNECTED
+                                  ? WiFi.localIP().toString().c_str()
+                                  : WiFi.softAPIP().toString().c_str();
 
     // Current time string for the live preview
     if (ntpSynced) {

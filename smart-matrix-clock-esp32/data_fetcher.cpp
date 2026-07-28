@@ -45,24 +45,15 @@ static void _fetchWeather() {
     //         temperature_2m_min (daily).  Both current and daily are requested
     //         in one call so we get everything in a single HTTP round-trip.
     char url[256];
-    if (isFahrenheit) {
-        snprintf(url, sizeof(url),
-            "http://api.open-meteo.com/v1/forecast"
-            "?latitude=%.4f&longitude=%.4f"
-            "&current=temperature_2m,weathercode"
-            "&daily=temperature_2m_max,temperature_2m_min"
-            "&temperature_unit=fahrenheit"
-            "&forecast_days=1&timezone=auto",
-            cfgWeatherLat, cfgWeatherLon);
-    } else {
-        snprintf(url, sizeof(url),
-            "http://api.open-meteo.com/v1/forecast"
-            "?latitude=%.4f&longitude=%.4f"
-            "&current=temperature_2m,weathercode"
-            "&daily=temperature_2m_max,temperature_2m_min"
-            "&forecast_days=1&timezone=auto",
-            cfgWeatherLat, cfgWeatherLon);
-    }
+    snprintf(url, sizeof(url),
+        "http://api.open-meteo.com/v1/forecast"
+        "?latitude=%.4f&longitude=%.4f"
+        "&current=temperature_2m,weathercode"
+        "&daily=temperature_2m_max,temperature_2m_min"
+        "%s"
+        "&forecast_days=1&timezone=auto",
+        cfgWeatherLat, cfgWeatherLon,
+        isFahrenheit ? "&temperature_unit=fahrenheit" : "");
 
     HTTPClient http;
     http.setTimeout(5000);   // 5 s timeout — hard rule from AGENTS.md
@@ -82,6 +73,12 @@ static void _fetchWeather() {
     // reading, producing an InvalidInput error on a valid payload.
     String body = http.getString();
     http.end();
+
+    if (body.length() == 0) {
+        Serial.println("[Weather] empty body (heap alloc failed?)");
+        if (weatherCache.valid) weatherCache.stale = true;
+        return;
+    }
 
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, body);
@@ -176,6 +173,11 @@ static bool _fetchOneQuote(const char* symbol, float* price, float* changePercen
 
     String body = http.getString();
     http.end();
+
+    if (body.length() == 0) {
+        Serial.printf("[Quotes] %s empty body (heap alloc failed?)\n", symbol);
+        return false;
+    }
 
     JsonDocument doc;
     DeserializationError err = deserializeJson(doc, body);

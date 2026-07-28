@@ -989,6 +989,8 @@ function pollStatus() {
       btn.disabled = !s.quotes_cache_valid;
       btn.style.opacity = s.quotes_cache_valid ? '1' : '0.4';
     });
+    // Firmware version footer
+    if (s.firmware_version) setText('fw-version', s.firmware_version);
   }).catch(function(){});
 }
 
@@ -1440,6 +1442,9 @@ loadConfig();
 pollStatus();
 setInterval(pollStatus, 1000);
 </script>
+<footer style="margin-top:24px;padding:12px 0;border-top:1px solid #30363d;text-align:center;font-size:11px;color:#8b949e">
+  Smart Matrix Clock &mdash; firmware <span id="fw-version">--</span>
+</footer>
 </body>
 </html>
 )=====";

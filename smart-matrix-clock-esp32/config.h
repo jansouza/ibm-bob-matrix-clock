@@ -8,6 +8,9 @@
  * in the project root for full license information.
  */
 
+// ─── Firmware version ─────────────────────────────────────────────────────────
+#define FIRMWARE_VERSION "1.0.0"
+
 // ─── Hardware — SPI pins (VSPI defaults) ──────────────────────────────────────
 #define PIN_CLK     18   // VSPI CLK
 #define PIN_DATA    23   // VSPI MOSI
