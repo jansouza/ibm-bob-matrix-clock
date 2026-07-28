@@ -2,7 +2,7 @@
 
 ## Overview
 
-This plan incorporates five new features into the existing firmware (Phase 3 complete) and proposes additional improvements. Features are prioritised by urgency and grouped so that each sub-task can be implemented and tested independently.
+This plan incorporates new features and improvements into the existing firmware. Features are prioritised by urgency and grouped so that each sub-task can be implemented and tested independently.
 
 Phases 4 and 5 (Weather and Quotes) from the original plan remain intact and are not affected by this plan.
 
@@ -27,11 +27,35 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 
 ### Pending
 
-| Sub-task | Feature | Urgency |
-|---|---|---|
-| Sub-Task 3 | Web interface password (HTTP Basic Auth) | 🟢 Low |
-| Sub-Task 6c | OTA firmware update (`POST /api/ota`) | 🟡 Medium |
-| Sub-Task 6f | Soft reboot via panel (`POST /api/restart`) | 🟡 Medium |
+| Sub-task | Feature | Urgency | GitHub Issue |
+|---|---|---|---|
+| Sub-Task 3 | Web interface password (HTTP Basic Auth) | 🟢 Low | [#8](https://github.com/jansouza/ibm-bob-matrix-clock/issues/8) |
+| Sub-Task 6c | OTA firmware update (`POST /api/ota`) | 🟡 Medium | [#9](https://github.com/jansouza/ibm-bob-matrix-clock/issues/9) |
+| Sub-Task 6f | Soft reboot via panel (`POST /api/restart`) | 🟡 Medium | [#10](https://github.com/jansouza/ibm-bob-matrix-clock/issues/10) |
+| Sub-Task 7 | 12-hour clock mode (HH:MM AM/PM) | 🟡 Medium | [#11](https://github.com/jansouza/ibm-bob-matrix-clock/issues/11) |
+| Sub-Task 8 | Diagnostics endpoint (`GET /api/diag`) | 🟡 Medium | [#12](https://github.com/jansouza/ibm-bob-matrix-clock/issues/12) |
+| Sub-Task 9 | Async WiFi scan (non-blocking) | 🟡 Medium | [#13](https://github.com/jansouza/ibm-bob-matrix-clock/issues/13) |
+| Sub-Task 10 | MQTT push messages | 🟢 Low | [#14](https://github.com/jansouza/ibm-bob-matrix-clock/issues/14) |
+| Sub-Task 11 | Display test mode (`POST /api/test`) | 🟢 Low | [#15](https://github.com/jansouza/ibm-bob-matrix-clock/issues/15) |
+| Sub-Task 12 | Message queue / playlist | 🟢 Low | [#16](https://github.com/jansouza/ibm-bob-matrix-clock/issues/16) |
+
+---
+
+## Code fixes
+
+Code-level issues found during review — bugs, robustness gaps, and cleanups that don't require a new feature. Each item is self-contained and can be fixed independently.
+
+→ Full details, problem descriptions, and code snippets: **[`docs/code-fixes.md`](code-fixes.md)**
+
+| # | Severity | Summary | File |
+|---|---|---|---|
+| C1 | 🔴 Bug Risk | `applyTimezone()` UB when IANA lookup returns `nullptr` twice | `persistence.cpp` |
+| C2 | 🟡 Bug Risk | `_slotInSchedule()` uses epoch `tm_wday` before NTP syncs | `display.cpp` |
+| C3 | 🟢 Cleanup | `slotEnabled[2/3]` written twice in `loadConfig()` — generic keys redundant | `persistence.cpp` |
+| C4 | 🟡 Robustness | `_fetchOneQuote()` — no guard for empty `getString()` on heap OOM | `data_fetcher.cpp` |
+| C5 | 🟡 Robustness | Factory reset BOOT button has no debounce — USB DTR can wipe settings | `.ino · setup()` |
+| C6 | 🟢 Cleanup | Slot indices `2`/`3` hardcoded everywhere — add `SLOT_WEATHER`/`SLOT_QUOTES` constants | `config.h` |
+| C7 | 🟢 Cleanup | `_fetchWeather()` URL builder duplicated for °C/°F — use single `snprintf` | `data_fetcher.cpp` |
 
 ---
 
@@ -45,6 +69,14 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 | F4 | Web interface language (pt/en in browser) | 🟢 Low |
 | F5 | WiFi network scan in the web interface | 🟢 Low |
 | F6 | Additional improvement suggestions | 🟡 Medium |
+| F7 | Soft reboot via panel (`POST /api/restart`) | 🟡 Medium |
+| F8 | 12-hour clock mode (HH:MM AM/PM) | 🟡 Medium |
+| F9 | OTA firmware update (`POST /api/ota`) | 🟡 Medium |
+| F10 | Diagnostics endpoint (`GET /api/diag`) | 🟡 Medium |
+| F11 | Async WiFi scan (non-blocking two-step) | 🟡 Medium |
+| F12 | MQTT push messages | 🟢 Low |
+| F13 | Display test mode (`POST /api/test`) | 🟢 Low |
+| F14 | Message queue / playlist | 🟢 Low |
 
 ---
 
@@ -140,7 +172,7 @@ CP437 characters are mapped to MD_MAX72XX font indices (control characters 0x01�
 
 ---
 
-## Sub-Task 3 — Web interface password via HTTP Basic Auth (Low urgency)
+## Sub-Task 3 — Web interface password via HTTP Basic Auth (Low urgency) [#8](https://github.com/jansouza/ibm-bob-matrix-clock/issues/8)
 
 **Status:** `[ ] pending`
 
@@ -260,7 +292,7 @@ The scan is synchronous (blocks ~2–3 s) and must only occur when explicitly tr
 
 ---
 
-## Sub-Task 6 — Additional suggested improvements (Medium urgency)
+## Sub-Task 6 — Additional suggested improvements (Medium urgency) · [6c #9](https://github.com/jansouza/ibm-bob-matrix-clock/issues/9) · [6f #10](https://github.com/jansouza/ibm-bob-matrix-clock/issues/10)
 
 **Status:** `[ ] pending`
 
@@ -299,13 +331,25 @@ Each item 6a–6f should be treated as an independent sub-task when approved for
 ## Recommended Implementation Order
 
 ```
-Sub-Task 1 (HH:MM:SS)          ← high urgency, isolated, no dependencies
-    └── Sub-Task 2 (Icons)      ← medium urgency, depends on text_encoding
-Sub-Task 6f (Restart button)   ← trivial, implement alongside ST2 or after
-Sub-Task 3 (Web Basic Auth)    ← low urgency, required before ST5
-Sub-Task 4 (UI i18n)           ← low urgency, independent
-Sub-Task 5 (WiFi Scan)         ← low urgency
-Sub-Task 6 remaining (6a-6e)   ← parallel with Phases 4 and 5 of original plan
+[Done] Sub-Task 1 (HH:MM:SS)
+[Done] Sub-Task 2 (Icons)
+[Done] Sub-Task 4 (UI i18n)
+[Done] Sub-Task 5 (WiFi Scan)
+[Done] Sub-Task 6a (Live preview)
+[Done] Sub-Task 6b (Auto brightness)
+[Done] Sub-Task 6d (Message history)
+[Done] Sub-Task 6e (Slot scheduling)
+
+Code fixes C1–C7                ← targeted fixes; no new features
+Sub-Task 6f / F7 (Restart)     ← trivial; 3 lines firmware + 1 button in UI
+Sub-Task 7 / F8 (12h clock)    ← plan already in docs/clock-12h-ampm-plan.md
+Sub-Task 8 / F10 (Diagnostics) ← single handler; no UI required
+Sub-Task 6c / F9 (OTA)         ← moderate complexity; high user value
+Sub-Task 9 / F11 (Async scan)  ← improves current WiFi scan
+Sub-Task 3 (HTTP Basic Auth)   ← security; must not break web panel self-requests
+Sub-Task 10 / F12 (MQTT)       ← extra library; most useful for home automation users
+Sub-Task 11 / F13 (Test mode)  ← hardware verification utility
+Sub-Task 12 / F14 (Msg queue)  ← UX improvement; touches message slot logic
 ```
 
 ---
@@ -319,3 +363,170 @@ This plan does not conflict with Phases 4 (Weather) and 5 (Quotes) from [`docs/i
 - **web_page** (Sub-Tasks 2, 3, 4, 5): UI modifications do not affect firmware.
 
 Phases 4 and 5 can be implemented in parallel or after this plan, without conflict.
+
+---
+
+## Sub-Task 7 — 12-hour clock mode (HH:MM AM/PM) [#11](https://github.com/jansouza/ibm-bob-matrix-clock/issues/11)
+
+**Status:** `[ ] pending`
+
+### Intent
+
+Add a 12-hour display mode as an alternative to the existing 24-hour modes. When active, the clock shows `H:MM` or `H:MM:SS` with a compact `A`/`P` suffix for AM/PM, fitting within the 32-column display. The mode is configurable from the web panel and persists in NVS. See [`docs/clock-12h-ampm-plan.md`](clock-12h-ampm-plan.md) for the pre-written detailed plan.
+
+### Expected Outcomes
+
+- A "12-hour mode" toggle in the Clock tab.
+- Display shows `3:47P` or `3:47:22P` depending on whether seconds mode is also active.
+- Colon blink behaviour is preserved.
+- The preference persists after reboot.
+
+### Todo List
+
+1. **`config.h`** — Add `#define CLOCK_MODE_12H 2`; add `NVS_KEY_CLOCK_12H`.
+2. **`globals.h/cpp`** — Declare `bool cfgClock12h`.
+3. **`persistence.cpp`** — Load/save `cfgClock12h`.
+4. **`display.cpp`** — In the `CLOCK_MODE_HHMM` branch, check `cfgClock12h` and format with `% 12` + AM/PM suffix.
+5. **`web_routes.cpp`** — Accept `clock_12h` field in `POST /api/config`.
+6. **`web_page.h`** — Add toggle in Clock tab; update live preview logic.
+
+### Relevant Context
+
+- [`docs/clock-12h-ampm-plan.md`](clock-12h-ampm-plan.md) — detailed pre-written plan.
+- [`smart-matrix-clock-esp32/display.cpp`](../smart-matrix-clock-esp32/display.cpp) — `displayTick()` clock render block.
+
+---
+
+## Sub-Task 8 — Diagnostics endpoint (`GET /api/diag`) [#12](https://github.com/jansouza/ibm-bob-matrix-clock/issues/12)
+
+**Status:** `[ ] pending`
+
+### Intent
+
+Expose a lightweight diagnostics endpoint that returns the device's runtime health metrics. Zero runtime overhead when not called — all values are queried on-demand from existing ESP32 APIs.
+
+### Expected Outcomes
+
+- `GET /api/diag` returns a JSON object with:
+  - `uptime_ms` — milliseconds since boot (`millis()`)
+  - `free_heap` — free heap bytes (`ESP.getFreeHeap()`)
+  - `min_free_heap` — historical minimum (`ESP.getMinFreeHeap()`)
+  - `wifi_rssi` — dBm (`WiFi.RSSI()`), or `null` if not connected
+  - `ntp_synced` — bool
+  - `last_weather_fetch_ms` — millis() of last successful weather fetch (or `0`)
+  - `last_quotes_fetch_ms` — millis() of last successful quotes fetch (or `0`)
+  - `build_date` — firmware build date (`__DATE__ " " __TIME__`)
+- No web panel changes required (accessible via `curl` or future panel tab).
+
+### Todo List
+
+1. **`web_routes.cpp`** — Add `_handleGetDiag()` handler; register `GET /api/diag`.
+2. **`data_fetcher.h/cpp`** — Expose `fetcherLastWeatherMs()` and `fetcherLastQuotesMs()` accessors.
+3. **`docs/api-rest.md`** — Document the new endpoint.
+
+### Relevant Context
+
+- `ESP.getFreeHeap()` and `ESP.getMinFreeHeap()` are standard Arduino ESP32 APIs.
+- `millis()` is always available; no extra state needed.
+
+---
+
+## Sub-Task 9 — Async WiFi scan (non-blocking) [#13](https://github.com/jansouza/ibm-bob-matrix-clock/issues/13)
+
+**Status:** `[ ] pending`
+
+### Intent
+
+Replace the current synchronous `WiFi.scanNetworks(false)` in `GET /api/wifi/scan` with a two-step async approach: a first call starts the scan and returns immediately, a second call returns the results once ready. Eliminates the 2-second freeze of the ESPAsyncWebServer task during scan.
+
+### Expected Outcomes
+
+- `GET /api/wifi/scan` — starts scan if not already running; returns `{"status":"scanning"}` immediately. If results are already available from a previous scan, returns them instead.
+- `GET /api/wifi/scan` polled again — when `WiFi.scanComplete()` is ≥ 0, returns the full results array and clears the scan.
+- The web panel polls every 1 s until results arrive, then renders the list.
+- The display loop is not blocked during the scan.
+
+### Todo List
+
+1. **`web_routes.cpp`** — Replace blocking `WiFi.scanNetworks(false)` with `WiFi.scanNetworks(true)` (async flag). Use `WiFi.scanComplete()` to check if results are ready; if not, return `{"status":"scanning"}`; if ready, build and return the results array.
+2. **`web_page.h`** — Update `runWifiScan()` to re-poll `GET /api/wifi/scan` every 1 s until `status` is not `"scanning"`.
+
+---
+
+## Sub-Task 10 — MQTT push messages [#14](https://github.com/jansouza/ibm-bob-matrix-clock/issues/14)
+
+**Status:** `[ ] pending`
+
+### Intent
+
+Allow external systems (Home Assistant, Node-RED, Zapier, n8n) to push messages to the display without polling the REST API. The ESP32 subscribes to a configurable MQTT broker + topic; arriving payloads are treated exactly like `POST /api/message` messages, including the same icon tag expansion.
+
+### Expected Outcomes
+
+- New MQTT settings in the web panel: broker hostname, port, topic, username/password (optional).
+- When enabled, any MQTT message arriving on the subscribed topic is immediately queued as a display message.
+- Supports both plain-text payloads and JSON payloads identical to `POST /api/message` body.
+- If the broker is unreachable, the rest of the firmware continues normally (MQTT is non-blocking, reconnects in background).
+
+### Todo List
+
+1. **`config.h`** — Add `MQTT_HOST_MAX`, `MQTT_TOPIC_MAX`, `MQTT_USER_MAX`, `MQTT_PASS_MAX` and matching NVS keys.
+2. **`globals.h/cpp`** — Declare `cfgMqttEnabled`, `cfgMqttHost`, `cfgMqttPort`, `cfgMqttTopic`, `cfgMqttUser`, `cfgMqttPass`.
+3. **`persistence.cpp`** — Load/save MQTT settings.
+4. **New `mqtt_client.h/cpp`** — Thin wrapper around `PubSubClient`; `mqttBegin()` called from `setup()`, `mqttTick()` called from `loop()`. On message: decode payload, fill `messageText`, set `messagePending = true`.
+5. **`web_routes.cpp`** — Accept MQTT fields in `POST /api/config`.
+6. **`web_page.h`** — New "Notifications" card in a suitable tab.
+
+### Relevant Context
+
+- **Required library:** `PubSubClient` by Nick O'Leary — `arduino-cli lib install "PubSubClient"`.
+- Payload decode should reuse `utf8ToLatin1()` + `expandIconTags()` from `text_encoding.cpp` — same pipeline as the REST handler.
+
+---
+
+## Sub-Task 11 — Display test mode (`POST /api/test`) [#15](https://github.com/jansouza/ibm-bob-matrix-clock/issues/15)
+
+**Status:** `[ ] pending`
+
+### Intent
+
+Add a hardware verification endpoint that lights all LEDs at maximum brightness for a configurable duration. Useful after assembly to verify there are no dead pixels or faulty modules, and for demonstrating the hardware.
+
+### Expected Outcomes
+
+- `POST /api/test` with body `{"mode":"all_on","duration_ms":3000}` lights all pixels at full brightness for 3 seconds, then returns the display to normal.
+- `mode` values: `"all_on"` (all LEDs on), `"all_off"` (clear), `"checkerboard"` (alternating pixels).
+- Implemented as a flag consumed by `displayTick()`, not blocking the handler.
+
+### Todo List
+
+1. **`globals.h/cpp`** — Add `testModePending` bool and `testModePattern` / `testModeDurationMs`.
+2. **`display.cpp`** — Handle `testModePending` at the top of `displayTick()`: apply the pattern via `getGraphicObject()->setColumn()`, set a timer, restore after duration.
+3. **`web_routes.cpp`** — Add `_handlePostTest()` handler; register `POST /api/test`.
+4. **`web_page.h`** — Add "Test display" buttons in the Display tab.
+
+---
+
+## Sub-Task 12 — Message queue / playlist [#16](https://github.com/jansouza/ibm-bob-matrix-clock/issues/16)
+
+**Status:** `[ ] pending`
+
+### Intent
+
+Currently only the most recent message is stored — sending a second one overwrites the first. A small FIFO queue (capacity configurable, default 5) allows pre-loading several messages that display in sequence before returning to the clock. This is particularly useful for automated notification systems that may send several messages in quick succession.
+
+### Expected Outcomes
+
+- Up to `MSG_QUEUE_SIZE` messages can be queued via successive `POST /api/message` calls.
+- Messages play in order; each message uses its own mode, duration, brightness, and scroll-speed overrides.
+- `GET /api/messages/queue` returns the current queue length and pending messages.
+- `POST /api/messages/clear` empties the queue.
+
+### Todo List
+
+1. **`config.h`** — Add `#define MSG_QUEUE_SIZE 5`.
+2. **`globals.h/cpp`** — Replace the single `messageText[]` / `messagePending` with a ring buffer of `MessageQueueEntry` structs (text, mode, duration, brightness, scrollSpeed).
+3. **`display.cpp`** — In `displayTick()`, dequeue the next entry when the current message finishes instead of clearing `messagePending`.
+4. **`web_routes.cpp`** — Update `POST /api/message` to enqueue; add `GET /api/messages/queue` and `POST /api/messages/clear`.
+5. **`web_page.h`** — Show queue length in the Message tab.
+

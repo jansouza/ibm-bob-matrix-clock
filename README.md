@@ -86,6 +86,8 @@ docs/
 ├── api-rest.md                   ← complete REST API reference
 ├── project-spec.md               ← full product specification
 ├── implementation-plan.md        ← 5-phase implementation plan
+├── enhancements-plan.md          ← feature roadmap and new sub-tasks
+├── code-fixes.md                 ← code-level bug fixes and cleanups (C1–C7)
 └── testing.md                    ← test suite reference (structure, coverage, how to add tests)
 ```
 
