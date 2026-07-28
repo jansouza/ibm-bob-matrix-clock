@@ -84,6 +84,7 @@ tests/
 └── test_persistence_language.cpp ← 43 tests for language validation, formatQuotePrice, config constants
 docs/
 ├── api-rest.md                   ← complete REST API reference
+├── home-assistant.md             ← Home Assistant integration guide
 ├── project-spec.md               ← full product specification
 ├── implementation-plan.md        ← 5-phase implementation plan
 ├── enhancements-plan.md          ← feature roadmap and new sub-tasks
@@ -170,6 +171,8 @@ curl -X POST http://<ip>/api/message \
 ```
 
 Full documentation: [`docs/api-rest.md`](docs/api-rest.md)
+
+Home Assistant integration: [`docs/home-assistant.md`](docs/home-assistant.md)
 
 ---
 

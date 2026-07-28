@@ -16,29 +16,31 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 
 | Sub-task | Feature |
 |---|---|
-| Sub-Task 1 | Configurable HH:MM:SS clock mode (`HH:MM` left-aligned with blinking colon + `SS` in 3×5 small font) |
-| Sub-Task 2 | Icons/symbols in messages (`[heart]`, `[star]`, `[warn]`, etc.) |
-| Sub-Task 4 | Web interface language (EN/PT, persisted on device) |
-| Sub-Task 5 | WiFi network scan (`GET /api/wifi/scan`) — scan button in Network tab, SSID list with signal bars and lock icon, click-to-fill |
-| Sub-Task 6a | Live message preview (icon tags resolved in browser before sending) |
-| Sub-Task 6b | Automatic brightness by time of day (night window, configurable start/end/level) |
-| Sub-Task 6d | Message history (`GET /api/messages/history`, last 20 messages) |
-| Sub-Task 6e | Slot scheduling by time of day (per-slot daily window on weather/quotes) |
+| [Sub-Task 1](#sub-task-1-configurable-hhmmss-mode-high-urgency) | Configurable HH:MM:SS clock mode (`HH:MM` left-aligned with blinking colon + `SS` in 3×5 small font) |
+| [Sub-Task 2](#sub-task-2-iconssymbols-in-messages-medium-urgency) | Icons/symbols in messages (`[heart]`, `[star]`, `[warn]`, etc.) |
+| [Sub-Task 4](#sub-task-4-web-interface-language-in-browser-low-urgency) | Web interface language (EN/PT, persisted on device) |
+| [Sub-Task 5](#sub-task-5-wifi-network-scan-in-the-web-interface-low-urgency) | WiFi network scan (`GET /api/wifi/scan`) — scan button in Network tab, SSID list with signal bars and lock icon, click-to-fill |
+| [Sub-Task 6a](#sub-task-6-additional-suggested-improvements-medium-urgency-6c-9-6f-10) | Live message preview (icon tags resolved in browser before sending) |
+| [Sub-Task 6b](#sub-task-6-additional-suggested-improvements-medium-urgency-6c-9-6f-10) | Automatic brightness by time of day (night window, configurable start/end/level) |
+| [Sub-Task 6d](#sub-task-6-additional-suggested-improvements-medium-urgency-6c-9-6f-10) | Message history (`GET /api/messages/history`, last 20 messages) |
+| [Sub-Task 6e](#sub-task-6-additional-suggested-improvements-medium-urgency-6c-9-6f-10) | Slot scheduling by time of day (per-slot daily window on weather/quotes) |
 
 ### Pending
 
 | Sub-task | Feature | Urgency | GitHub Issue |
 |---|---|---|---|
-| Sub-Task 3 | Web interface password (HTTP Basic Auth) | 🟢 Low | [#8](https://github.com/jansouza/ibm-bob-matrix-clock/issues/8) |
-| Sub-Task 6c | OTA firmware update (`POST /api/ota`) | 🟡 Medium | [#9](https://github.com/jansouza/ibm-bob-matrix-clock/issues/9) |
-| Sub-Task 6f | Soft reboot via panel (`POST /api/restart`) | 🟡 Medium | [#10](https://github.com/jansouza/ibm-bob-matrix-clock/issues/10) |
-| Sub-Task 7 | 12-hour clock mode (HH:MM AM/PM) | 🟡 Medium | [#11](https://github.com/jansouza/ibm-bob-matrix-clock/issues/11) |
-| Sub-Task 8 | Diagnostics endpoint (`GET /api/diag`) | 🟡 Medium | [#12](https://github.com/jansouza/ibm-bob-matrix-clock/issues/12) |
-| Sub-Task 9 | Async WiFi scan (non-blocking) | 🟡 Medium | [#13](https://github.com/jansouza/ibm-bob-matrix-clock/issues/13) |
-| Sub-Task 10 | MQTT push messages | 🟢 Low | [#14](https://github.com/jansouza/ibm-bob-matrix-clock/issues/14) |
-| Sub-Task 11 | Display test mode (`POST /api/test`) | 🟢 Low | [#15](https://github.com/jansouza/ibm-bob-matrix-clock/issues/15) |
-| Sub-Task 12 | Message queue / playlist | 🟢 Low | [#16](https://github.com/jansouza/ibm-bob-matrix-clock/issues/16) |
-| Sub-Task 13 | Version control & GitHub Actions release pipeline (version part only — `FIRMWARE_VERSION`, `/api/status` field, web panel footer) | 🟡 Medium | [#17](https://github.com/jansouza/ibm-bob-matrix-clock/issues/17) |
+| [Sub-Task 3](#sub-task-3-web-interface-password-via-http-basic-auth-low-urgency-8) | Web interface password (HTTP Basic Auth) | 🟢 Low | [#8](https://github.com/jansouza/ibm-bob-matrix-clock/issues/8) |
+| [Sub-Task 6c](#sub-task-6-additional-suggested-improvements-medium-urgency-6c-9-6f-10) | OTA firmware update (`POST /api/ota`) | 🟡 Medium | [#9](https://github.com/jansouza/ibm-bob-matrix-clock/issues/9) |
+| [Sub-Task 6f](#sub-task-6-additional-suggested-improvements-medium-urgency-6c-9-6f-10) | Soft reboot via panel (`POST /api/restart`) | 🟡 Medium | [#10](https://github.com/jansouza/ibm-bob-matrix-clock/issues/10) |
+| [Sub-Task 7](#sub-task-7-12-hour-clock-mode-hhmm-ampm-11) | 12-hour clock mode (HH:MM AM/PM) | 🟡 Medium | [#11](https://github.com/jansouza/ibm-bob-matrix-clock/issues/11) |
+| [Sub-Task 8](#sub-task-8-extend-get-apistatus-with-runtime-diagnostics-12) | Extend `GET /api/status` with runtime diagnostics | 🟡 Medium | [#12](https://github.com/jansouza/ibm-bob-matrix-clock/issues/12) |
+| [Sub-Task 9](#sub-task-9-async-wifi-scan-non-blocking-13) | Async WiFi scan (non-blocking) | 🟡 Medium | [#13](https://github.com/jansouza/ibm-bob-matrix-clock/issues/13) |
+| [Sub-Task 10](#sub-task-10-mqtt-push-messages-14) | MQTT push messages | 🟢 Low | [#14](https://github.com/jansouza/ibm-bob-matrix-clock/issues/14) |
+| [Sub-Task 11](#sub-task-11-display-test-mode-post-apitest-15) | Display test mode (`POST /api/test`) | 🟢 Low | [#15](https://github.com/jansouza/ibm-bob-matrix-clock/issues/15) |
+| [Sub-Task 12](#sub-task-12-message-queue-playlist-16) | Message queue / playlist | 🟢 Low | [#16](https://github.com/jansouza/ibm-bob-matrix-clock/issues/16) |
+| [Sub-Task 13](#sub-task-13-version-control-github-actions-release-pipeline-17) | Version control & GitHub Actions release pipeline (version part only — `FIRMWARE_VERSION`, `/api/status` field, web panel footer) | 🟡 Medium | [#17](https://github.com/jansouza/ibm-bob-matrix-clock/issues/17) |
+| [Sub-Task 14](#sub-task-14-diagnostics-in-the-web-ui-rssi-uptime-heap-19) | Diagnostics in the web UI (RSSI, uptime, heap) | 🟢 Low | [#19](https://github.com/jansouza/ibm-bob-matrix-clock/issues/19) |
+| [Sub-Task 15](#sub-task-15-countdowns-timers-18) | Countdowns & Timers | 🟢 Low | [#18](https://github.com/jansouza/ibm-bob-matrix-clock/issues/18) |
 
 ---
 
@@ -73,11 +75,12 @@ Code-level issues found during review — bugs, robustness gaps, and cleanups th
 | F7 | Soft reboot via panel (`POST /api/restart`) | 🟡 Medium |
 | F8 | 12-hour clock mode (HH:MM AM/PM) | 🟡 Medium |
 | F9 | OTA firmware update (`POST /api/ota`) | 🟡 Medium |
-| F10 | Diagnostics endpoint (`GET /api/diag`) | 🟡 Medium |
+| F10 | Runtime diagnostics in `GET /api/status` | 🟡 Medium |
 | F11 | Async WiFi scan (non-blocking two-step) | 🟡 Medium |
 | F12 | MQTT push messages | 🟢 Low |
 | F13 | Display test mode (`POST /api/test`) | 🟢 Low |
 | F14 | Message queue / playlist | 🟢 Low |
+| F15 | Diagnostics in the web UI | 🟢 Low |
 
 ---
 
@@ -398,37 +401,84 @@ Add a 12-hour display mode as an alternative to the existing 24-hour modes. When
 
 ---
 
-## Sub-Task 8 — Diagnostics endpoint (`GET /api/diag`) [#12](https://github.com/jansouza/ibm-bob-matrix-clock/issues/12)
+## Sub-Task 8 — Extend `GET /api/status` with runtime diagnostics [#12](https://github.com/jansouza/ibm-bob-matrix-clock/issues/12)
 
 **Status:** `[ ] pending`
 
 ### Intent
 
-Expose a lightweight diagnostics endpoint that returns the device's runtime health metrics. Zero runtime overhead when not called — all values are queried on-demand from existing ESP32 APIs.
+Extend the existing [`GET /api/status`](api-rest.md) response with lightweight runtime health metrics. The web panel already polls `/api/status` every second — adding diagnostic fields here avoids a second endpoint and eliminates duplication of `ntp_synced` and other overlapping fields. All values are queried on-demand from existing ESP32 APIs — zero runtime overhead when not called.
 
 ### Expected Outcomes
 
-- `GET /api/diag` returns a JSON object with:
-  - `uptime_ms` — milliseconds since boot (`millis()`)
-  - `free_heap` — free heap bytes (`ESP.getFreeHeap()`)
-  - `min_free_heap` — historical minimum (`ESP.getMinFreeHeap()`)
-  - `wifi_rssi` — dBm (`WiFi.RSSI()`), or `null` if not connected
-  - `ntp_synced` — bool
-  - `last_weather_fetch_ms` — millis() of last successful weather fetch (or `0`)
-  - `last_quotes_fetch_ms` — millis() of last successful quotes fetch (or `0`)
-  - `build_date` — firmware build date (`__DATE__ " " __TIME__`)
-- No web panel changes required (accessible via `curl` or future panel tab).
+- `GET /api/status` keeps its current fields and also returns:
+  ```json
+  {
+    "ntp_synced":            true,
+    "active_slot":           0,
+    "ssid":                  "MyNetwork",
+    "ip":                    "192.168.1.42",
+    "time_str":              "14:35",
+    "firmware_version":      "1.0.0",
+    "uptime_ms":             123456789,
+    "free_heap":             142320,
+    "min_free_heap":         98304,
+    "wifi_rssi":             -58,
+    "last_weather_fetch_ms": 4321000,
+    "last_quotes_fetch_ms":  4315000,
+    "build_date":            "Jul 27 2026 22:00:00"
+  }
+  ```
+- No new REST route is added.
+- Existing web panel polling continues to use the same endpoint.
+- `wifi_rssi` is `null` (JSON null) when WiFi is not connected.
+- UI exposure of the new diagnostic fields is tracked separately in Sub-Task 14.
 
 ### Todo List
 
-1. **`web_routes.cpp`** — Add `_handleGetDiag()` handler; register `GET /api/diag`.
-2. **`data_fetcher.h/cpp`** — Expose `fetcherLastWeatherMs()` and `fetcherLastQuotesMs()` accessors.
-3. **`docs/api-rest.md`** — Document the new endpoint.
+1. **`data_fetcher.h/cpp`** — Expose `fetcherLastWeatherMs()` and `fetcherLastQuotesMs()` accessors returning the `millis()` of the last successful fetch.
+2. **`web_routes.cpp`** — Extend `_handleGetStatus()` with: `uptime_ms`, `free_heap`, `min_free_heap`, `wifi_rssi` (or `null`), `last_weather_fetch_ms`, `last_quotes_fetch_ms`, `build_date`.
+3. **`docs/api-rest.md`** — Update `GET /api/status` documentation with the new fields.
+4. **`README.md`** — Update the REST API summary to reflect the expanded status payload.
 
 ### Relevant Context
 
+- [`GET /api/status`](api-rest.md) already exists and is polled by the web panel every 1 second.
 - `ESP.getFreeHeap()` and `ESP.getMinFreeHeap()` are standard Arduino ESP32 APIs.
 - `millis()` is always available; no extra state needed.
+- UI exposure of the diagnostic fields is tracked separately in Sub-Task 14 / [#19](https://github.com/jansouza/ibm-bob-matrix-clock/issues/19).
+
+---
+
+## Sub-Task 14 — Diagnostics in the web UI (RSSI, uptime, heap) [#19](https://github.com/jansouza/ibm-bob-matrix-clock/issues/19)
+
+**Status:** `[ ] pending`
+
+### Intent
+
+Expose selected diagnostic fields from [`GET /api/status`](api-rest.md) inside the web interface, so operators can quickly inspect signal strength and device health without using `curl`.
+
+### Expected Outcomes
+
+- The web panel shows selected diagnostics such as:
+  - `wifi_rssi`
+  - `uptime_ms`
+  - `free_heap`
+  - `min_free_heap`
+- The diagnostics are presented in a small status area or diagnostics section.
+- The UI remains optional and lightweight; the backend contract stays the single source of truth.
+
+### Todo List
+
+1. **`web_page.cpp`** — Add a small diagnostics area reading the new fields from the existing `/api/status` poll.
+2. **`README.md`** — Mention that the web panel surfaces runtime diagnostics.
+3. **`docs/api-rest.md`** — Cross-reference UI consumers of the new endpoint if helpful.
+
+### Relevant Context
+
+- [`web_page.cpp`](../smart-matrix-clock-esp32/web_page.cpp) is the web panel source.
+- `wifi_rssi` is especially useful to explain unstable connectivity in field deployments.
+- **Dependency**: Sub-Task 8 (new fields in `GET /api/status` / [#12](https://github.com/jansouza/ibm-bob-matrix-clock/issues/12)) must be implemented first.
 
 ---
 
@@ -562,12 +612,11 @@ The firmware has no formal version identifier today — there is no `VERSION` co
 ### Todo List
 
 1. [x] **`config.h`** — Add `#define FIRMWARE_VERSION "1.0.0"` near the top.
-2. [x] **`globals.h/cpp`** — No change needed; version is a compile-time constant.
-3. [x] **`web_routes.cpp`** — In `_handleGetStatus()`, add `"firmware_version"` field from `FIRMWARE_VERSION`.
-4. [x] **`web_page.h/cpp`** — Add version string to the panel footer (small muted text).
-5. [ ] **`.github/workflows/ci.yml`** — Workflow: triggers on `push` and `pull_request` to `main`; installs `esp32:esp32:esp32` core + required libraries; runs `arduino-cli compile --fqbn esp32:esp32:esp32 smart-matrix-clock-esp32`; reports pass/fail.
-6. [ ] **`.github/workflows/release.yml`** — Workflow: triggers on `push` of tags matching `v[0-9]*`; compiles with `--output-dir build/`; extracts `FIRMWARE_VERSION` from `config.h` and asserts it equals the tag (strip leading `v`); creates a GitHub Release via `softprops/action-gh-release` with the `.bin` file attached.
-7. [ ] **`README.md`** — Add CI badge and document the release tagging procedure.
+2. [x] **`web_routes.cpp`** — In `_handleGetStatus()`, add `"firmware_version"` field from `FIRMWARE_VERSION`.
+3. [x] **`web_page.h/cpp`** — Add version string to the panel footer (small muted text).
+4. [ ] **`.github/workflows/ci.yml`** — Workflow: triggers on `push` and `pull_request` to `main`; installs `esp32:esp32:esp32` core + required libraries; runs `arduino-cli compile --fqbn esp32:esp32:esp32 smart-matrix-clock-esp32`; reports pass/fail.
+5. [ ] **`.github/workflows/release.yml`** — Workflow: triggers on `push` of tags matching `v[0-9]*`; compiles with `--output-dir build/`; extracts `FIRMWARE_VERSION` from `config.h` and asserts it equals the tag (strip leading `v`); creates a GitHub Release via `softprops/action-gh-release` with the `.bin` file attached.
+6. [ ] **`README.md`** — Add CI badge and document the release tagging procedure.
 
 ### Relevant Context
 
@@ -576,3 +625,49 @@ The firmware has no formal version identifier today — there is no `VERSION` co
 - The `arduino/compile-sketches` action handles library and core installation declaratively via its `libraries` and `fqbn` inputs — no custom shell bootstrap needed.
 - Sub-Task 6c (OTA) will consume `FIRMWARE_VERSION` to compare running firmware against an available update — implement this sub-task first so the field is already in place when OTA is built.
 - Tag format: `v1.0.0`, `v1.1.0-rc1` — the release workflow should strip the leading `v` before comparing against `FIRMWARE_VERSION`.
+
+
+## Sub-Task 15 — Countdowns & Timers [#18](https://github.com/jansouza/ibm-bob-matrix-clock/issues/18)
+
+**Status:** `[ ] pending`
+
+### Intent
+
+Add a dedicated countdown/timer slot to the display rotation. Users configure one or more named target dates/times (e.g. "New Year", "Birthday", "Meeting") via the web panel; the display shows a live scrolling countdown such as `New Year 3d 14h 20m` or `Meeting in 45m`. When the target is reached, a configurable message is shown for a short period. Timers (count-up from a start time) are also supported with the same slot.
+
+### Design decisions
+
+- Countdowns and timers are stored as a small array of entries, each with: `label` (string), `targetEpoch` (Unix timestamp, UTC), `direction` (`down` / `up`), `enabled` (bool).
+- The slot reuses the existing slot rotation infrastructure — it is slot index 4 (after quotes) and respects the standard `slotEnabled` / `slotIntervalMs` pattern.
+- Target timestamps are stored in NVS as ISO-8601 strings and converted to `time_t` on load. The ESP32 RTC handles the running difference via `time(NULL)`.
+- Display format (count-down): `<label> Xd Xh Xm` — if less than 1 hour remains, switch to `Xm Xs`.
+- Display format (count-up): `<label> +Xd Xh Xm`.
+- When a countdown reaches zero a one-shot message (`[bell] <label>!`) is injected into the message slot; the countdown entry is automatically disabled afterwards.
+- A maximum of `COUNTDOWN_MAX_ENTRIES` (default 4) entries are supported to keep NVS key usage bounded.
+- The web panel exposes a **Timers** tab with an add/edit/delete list; each entry has label, target date-time picker, direction toggle, and enable checkbox.
+- `GET /api/timers` returns the current entries; `POST /api/timers` creates/replaces the full list; `DELETE /api/timers/{index}` removes a single entry.
+
+### Expected Outcomes
+
+- Display slot cycles through active countdown/timer entries during rotation.
+- Live countdown updates every second when the slot is active.
+- Web panel **Timers** tab shows all entries and allows add/edit/delete without page reload.
+- Reaching zero auto-fires a bell message and disables the entry.
+- Entries survive reboots (persisted in NVS).
+
+### Todo List
+
+1. **`config.h`** — Add `#define COUNTDOWN_MAX_ENTRIES 4` and slot index constant `SLOT_COUNTDOWN 4`.
+2. **`globals.h/cpp`** — Add `CountdownEntry` struct (`label`, `targetEpoch`, `direction`, `enabled`) and `countdownEntries[]` array; add `slotEnabled[4]` / `slotIntervalMs[4]` entry.
+3. **`persistence.h/cpp`** — Add `loadCountdowns()` / `saveCountdowns()` reading/writing up to `COUNTDOWN_MAX_ENTRIES` entries in NVS; call `loadCountdowns()` in `loadConfig()`.
+4. **`display.cpp`** — Add countdown rendering branch in `slotRotationTick()`; compute remaining time from `time(NULL) - entry.targetEpoch`; format `Xd Xh Xm` / `Xm Xs`; fire bell message on reaching zero.
+5. **`web_routes.cpp`** — Register `GET /api/timers`, `POST /api/timers`, `DELETE /api/timers/{index}`; call `saveCountdowns()` on write.
+6. **`web_page.h/cpp`** — Add **Timers** tab with entry list (label, datetime, direction, enable toggle), add/delete controls; poll `GET /api/timers` on tab activation.
+
+### Relevant Context
+
+- Slot index 4 follows the existing pattern; `SLOT_CLOCK=0`, `SLOT_MESSAGE=1`, `SLOT_WEATHER=2`, `SLOT_QUOTES=3`.
+- NVS key budget: each entry needs ~4 keys (label, epoch, direction, enabled) × 4 entries = 16 keys — stay within the 15-char key limit.
+- `time(NULL)` returns UTC seconds; `targetEpoch` is also UTC — no TZ conversion needed for the difference.
+- The one-shot bell message on reaching zero reuses the existing `messagePending` / `messageText[]` mechanism.
+- Follow the "Adding a New Slot" checklist in `AGENTS.md` step by step.
