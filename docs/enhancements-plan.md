@@ -24,6 +24,8 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 | [Sub-Task 6b](#sub-task-6-additional-suggested-improvements-medium-urgency-6c-9-6f-10) | Automatic brightness by time of day (night window, configurable start/end/level) |
 | [Sub-Task 6d](#sub-task-6-additional-suggested-improvements-medium-urgency-6c-9-6f-10) | Message history (`GET /api/messages/history`, last 20 messages) |
 | [Sub-Task 6e](#sub-task-6-additional-suggested-improvements-medium-urgency-6c-9-6f-10) | Slot scheduling by time of day (per-slot daily window on weather/quotes) |
+| [Sub-Task 8](#sub-task-8-extend-get-apistatus-with-runtime-diagnostics-12) | Extend `GET /api/status` with runtime diagnostics (`uptime_ms`, `free_heap`, `min_free_heap`, `wifi_rssi`, `last_weather_fetch_ms`, `last_quotes_fetch_ms`, `build_date`) |
+| [Sub-Task 14](#sub-task-14-wifi-signal-strength-in-the-web-ui-19) | WiFi signal strength in the web UI — signal bar + dBm value in the Network tab, updated every second |
 
 ### Pending
 
@@ -33,32 +35,12 @@ Reference: [`docs/implementation-plan.md`](docs/implementation-plan.md) | [`docs
 | [Sub-Task 6c](#sub-task-6-additional-suggested-improvements-medium-urgency-6c-9-6f-10) | OTA firmware update (`POST /api/ota`) | 🟡 Medium | [#9](https://github.com/jansouza/ibm-bob-matrix-clock/issues/9) |
 | [Sub-Task 6f](#sub-task-6-additional-suggested-improvements-medium-urgency-6c-9-6f-10) | Soft reboot via panel (`POST /api/restart`) | 🟡 Medium | [#10](https://github.com/jansouza/ibm-bob-matrix-clock/issues/10) |
 | [Sub-Task 7](#sub-task-7-12-hour-clock-mode-hhmm-ampm-11) | 12-hour clock mode (HH:MM AM/PM) | 🟡 Medium | [#11](https://github.com/jansouza/ibm-bob-matrix-clock/issues/11) |
-| [Sub-Task 8](#sub-task-8-extend-get-apistatus-with-runtime-diagnostics-12) | Extend `GET /api/status` with runtime diagnostics | 🟡 Medium | [#12](https://github.com/jansouza/ibm-bob-matrix-clock/issues/12) |
 | [Sub-Task 9](#sub-task-9-async-wifi-scan-non-blocking-13) | Async WiFi scan (non-blocking) | 🟡 Medium | [#13](https://github.com/jansouza/ibm-bob-matrix-clock/issues/13) |
 | [Sub-Task 10](#sub-task-10-mqtt-push-messages-14) | MQTT push messages | 🟢 Low | [#14](https://github.com/jansouza/ibm-bob-matrix-clock/issues/14) |
 | [Sub-Task 11](#sub-task-11-display-test-mode-post-apitest-15) | Display test mode (`POST /api/test`) | 🟢 Low | [#15](https://github.com/jansouza/ibm-bob-matrix-clock/issues/15) |
 | [Sub-Task 12](#sub-task-12-message-queue-playlist-16) | Message queue / playlist | 🟢 Low | [#16](https://github.com/jansouza/ibm-bob-matrix-clock/issues/16) |
 | [Sub-Task 13](#sub-task-13-version-control-github-actions-release-pipeline-17) | Version control & GitHub Actions release pipeline (version part only — `FIRMWARE_VERSION`, `/api/status` field, web panel footer) | 🟡 Medium | [#17](https://github.com/jansouza/ibm-bob-matrix-clock/issues/17) |
-| [Sub-Task 14](#sub-task-14-diagnostics-in-the-web-ui-rssi-uptime-heap-19) | Diagnostics in the web UI (RSSI, uptime, heap) | 🟢 Low | [#19](https://github.com/jansouza/ibm-bob-matrix-clock/issues/19) |
 | [Sub-Task 15](#sub-task-15-countdowns-timers-18) | Countdowns & Timers | 🟢 Low | [#18](https://github.com/jansouza/ibm-bob-matrix-clock/issues/18) |
-
----
-
-## Code fixes
-
-Code-level issues found during review — bugs, robustness gaps, and cleanups that don't require a new feature. Each item is self-contained and can be fixed independently.
-
-→ Full details, problem descriptions, and code snippets: **[`docs/code-fixes.md`](code-fixes.md)**
-
-| # | Severity | Summary | File |
-|---|---|---|---|
-| C1 | ⚪ Not an issue | ~~`applyTimezone()` UB when IANA lookup returns `nullptr` twice~~ ✅ invalid — stale comment fixed | `persistence.cpp` |
-| C2 | 🟡 Bug Risk | ~~`_slotInSchedule()` uses epoch `tm_wday` before NTP syncs~~ ✅ fixed | `display.cpp` |
-| C3 | 🟢 Cleanup | `slotEnabled[2/3]` written twice in `loadConfig()` — generic keys redundant | `persistence.cpp` |
-| C4 | 🟡 Robustness | ~~`_fetchOneQuote()` — no guard for empty `getString()` on heap OOM~~ ✅ fixed (both fetchers) | `data_fetcher.cpp` |
-| C5 | 🟡 Robustness | Factory reset BOOT button has no debounce — USB DTR can wipe settings | `.ino · setup()` |
-| C6 | 🟢 Cleanup | Slot indices `2`/`3` hardcoded everywhere — add `SLOT_WEATHER`/`SLOT_QUOTES` constants | `config.h` |
-| C7 | 🟢 Cleanup | ~~`_fetchWeather()` URL builder duplicated for °C/°F — use single `snprintf`~~ ✅ fixed | `data_fetcher.cpp` |
 
 ---
 
@@ -403,7 +385,7 @@ Add a 12-hour display mode as an alternative to the existing 24-hour modes. When
 
 ## Sub-Task 8 — Extend `GET /api/status` with runtime diagnostics [#12](https://github.com/jansouza/ibm-bob-matrix-clock/issues/12)
 
-**Status:** `[ ] pending`
+**Status:** `[x] done`
 
 ### Intent
 
@@ -436,10 +418,10 @@ Extend the existing [`GET /api/status`](api-rest.md) response with lightweight r
 
 ### Todo List
 
-1. **`data_fetcher.h/cpp`** — Expose `fetcherLastWeatherMs()` and `fetcherLastQuotesMs()` accessors returning the `millis()` of the last successful fetch.
-2. **`web_routes.cpp`** — Extend `_handleGetStatus()` with: `uptime_ms`, `free_heap`, `min_free_heap`, `wifi_rssi` (or `null`), `last_weather_fetch_ms`, `last_quotes_fetch_ms`, `build_date`.
-3. **`docs/api-rest.md`** — Update `GET /api/status` documentation with the new fields.
-4. **`README.md`** — Update the REST API summary to reflect the expanded status payload.
+1. [x] **`data_fetcher.h/cpp`** — Expose `fetcherLastWeatherMs()` and `fetcherLastQuotesMs()` accessors returning the `millis()` of the last successful fetch.
+2. [x] **`web_routes.cpp`** — Extend `_handleGetStatus()` with: `uptime_ms`, `free_heap`, `min_free_heap`, `wifi_rssi` (or `null`), `last_weather_fetch_ms`, `last_quotes_fetch_ms`, `build_date`.
+3. [x] **`docs/api-rest.md`** — Update `GET /api/status` documentation with the new fields.
+4. [ ] **`README.md`** — Update the REST API summary to reflect the expanded status payload.
 
 ### Relevant Context
 
@@ -447,38 +429,6 @@ Extend the existing [`GET /api/status`](api-rest.md) response with lightweight r
 - `ESP.getFreeHeap()` and `ESP.getMinFreeHeap()` are standard Arduino ESP32 APIs.
 - `millis()` is always available; no extra state needed.
 - UI exposure of the diagnostic fields is tracked separately in Sub-Task 14 / [#19](https://github.com/jansouza/ibm-bob-matrix-clock/issues/19).
-
----
-
-## Sub-Task 14 — Diagnostics in the web UI (RSSI, uptime, heap) [#19](https://github.com/jansouza/ibm-bob-matrix-clock/issues/19)
-
-**Status:** `[ ] pending`
-
-### Intent
-
-Expose selected diagnostic fields from [`GET /api/status`](api-rest.md) inside the web interface, so operators can quickly inspect signal strength and device health without using `curl`.
-
-### Expected Outcomes
-
-- The web panel shows selected diagnostics such as:
-  - `wifi_rssi`
-  - `uptime_ms`
-  - `free_heap`
-  - `min_free_heap`
-- The diagnostics are presented in a small status area or diagnostics section.
-- The UI remains optional and lightweight; the backend contract stays the single source of truth.
-
-### Todo List
-
-1. **`web_page.cpp`** — Add a small diagnostics area reading the new fields from the existing `/api/status` poll.
-2. **`README.md`** — Mention that the web panel surfaces runtime diagnostics.
-3. **`docs/api-rest.md`** — Cross-reference UI consumers of the new endpoint if helpful.
-
-### Relevant Context
-
-- [`web_page.cpp`](../smart-matrix-clock-esp32/web_page.cpp) is the web panel source.
-- `wifi_rssi` is especially useful to explain unstable connectivity in field deployments.
-- **Dependency**: Sub-Task 8 (new fields in `GET /api/status` / [#12](https://github.com/jansouza/ibm-bob-matrix-clock/issues/12)) must be implemented first.
 
 ---
 
@@ -626,6 +576,32 @@ The firmware has no formal version identifier today — there is no `VERSION` co
 - Sub-Task 6c (OTA) will consume `FIRMWARE_VERSION` to compare running firmware against an available update — implement this sub-task first so the field is already in place when OTA is built.
 - Tag format: `v1.0.0`, `v1.1.0-rc1` — the release workflow should strip the leading `v` before comparing against `FIRMWARE_VERSION`.
 
+
+## Sub-Task 14 — WiFi signal strength in the web UI [#19](https://github.com/jansouza/ibm-bob-matrix-clock/issues/19)
+
+**Status:** `[x] done`
+
+### Intent
+
+Show the WiFi signal strength (`wifi_rssi`) in the web panel so operators can instantly see connection quality without using `curl`. The value is already available in `GET /api/status` after Sub-Task 8 is implemented.
+
+### Expected Outcomes
+
+- The web panel shows the current `wifi_rssi` value (dBm) in a visible area (e.g. the Network tab or the top status bar).
+- Displayed as a numeric value and/or a small signal-bar indicator.
+- Reads from the existing `/api/status` poll — no new endpoint or backend change required.
+
+### Todo List
+
+1. [x] **`web_page.cpp`** — Add `wifi_rssi` display to the web panel using the existing `/api/status` polling flow.
+
+### Relevant Context
+
+- [`web_page.cpp`](../smart-matrix-clock-esp32/web_page.cpp) already polls `/api/status` every second.
+- `wifi_rssi` will be `null` when not connected (handle gracefully in the UI).
+- **Dependency**: Sub-Task 8 (new fields in `GET /api/status` / [#12](https://github.com/jansouza/ibm-bob-matrix-clock/issues/12)) must be implemented first.
+
+---
 
 ## Sub-Task 15 — Countdowns & Timers [#18](https://github.com/jansouza/ibm-bob-matrix-clock/issues/18)
 

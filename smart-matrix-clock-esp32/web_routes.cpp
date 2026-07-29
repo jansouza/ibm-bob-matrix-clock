@@ -21,6 +21,7 @@
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
+#include <Arduino.h>
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
@@ -66,6 +67,19 @@ static void _handleGetStatus(AsyncWebServerRequest* req) {
     doc["ip"]               = WiFi.status() == WL_CONNECTED
                                   ? WiFi.localIP().toString().c_str()
                                   : WiFi.softAPIP().toString().c_str();
+
+    // Runtime diagnostics (Sub-Task 8)
+    doc["uptime_ms"]       = (uint32_t)millis();
+    doc["free_heap"]       = (uint32_t)ESP.getFreeHeap();
+    doc["min_free_heap"]   = (uint32_t)ESP.getMinFreeHeap();
+    if (WiFi.status() == WL_CONNECTED) {
+        doc["wifi_rssi"]   = (int)WiFi.RSSI();
+    } else {
+        doc["wifi_rssi"]   = nullptr;
+    }
+    doc["last_weather_fetch_ms"] = (uint32_t)fetcherLastWeatherMs();
+    doc["last_quotes_fetch_ms"]  = (uint32_t)fetcherLastQuotesMs();
+    doc["build_date"]            = __DATE__ " " __TIME__;
 
     // Current time string for the live preview
     if (ntpSynced) {

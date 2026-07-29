@@ -50,17 +50,31 @@ Returns the built-in web interface (self-contained HTML/CSS/JS).
 
 ### `GET /api/status`
 
-Returns the current operational state of the device.
+Returns the current operational state of the device, including runtime diagnostics. The web panel polls this endpoint every second.
 
 **Response `200`:**
 
 ```json
 {
-  "ntp_synced":  true,
-  "active_slot": 0,
-  "ssid":        "MyNetwork",
-  "ip":          "192.168.1.42",
-  "time_str":    "14:35"
+  "ntp_synced":            true,
+  "active_slot":           0,
+  "firmware_version":      "1.0.0",
+  "ssid":                  "MyNetwork",
+  "ip":                    "192.168.1.42",
+  "time_str":              "14:35",
+  "uptime_ms":             123456789,
+  "free_heap":             142320,
+  "min_free_heap":         98304,
+  "wifi_rssi":             -58,
+  "last_weather_fetch_ms": 4321000,
+  "last_quotes_fetch_ms":  4315000,
+  "build_date":            "Jul 27 2026 22:00:00",
+  "weather_cache_valid":   true,
+  "weather_cache_stale":   false,
+  "weather_preview":       "22°C Clear  Min18  Max26",
+  "quotes_cache_valid":    true,
+  "quotes_cache_stale":    false,
+  "quotes_preview":        "AAPL: 182.30 +0.45%"
 }
 ```
 
@@ -68,9 +82,23 @@ Returns the current operational state of the device.
 |---|---|---|
 | `ntp_synced` | bool | `true` after the first successful NTP synchronisation |
 | `active_slot` | int | Index of the currently active slot (0=clock, 1=message, 2=weather, 3=quotes) |
+| `firmware_version` | string | Semantic version string from `FIRMWARE_VERSION` in `config.h` |
 | `ssid` | string | SSID of the connected WiFi network; `""` when in AP mode |
 | `ip` | string | IP address of the active interface (station or AP softIP) |
-| `time_str` | string | Current time as `HH:MM`; `"--:--"` if NTP has not synced yet |
+| `time_str` | string | Current time as `HH:MM` or `HH:MM:SS` (depends on `clock_mode`); `"--:--"` if NTP has not synced |
+| `uptime_ms` | uint32 | Milliseconds since boot (`millis()`) |
+| `free_heap` | uint32 | Current free heap in bytes (`ESP.getFreeHeap()`) |
+| `min_free_heap` | uint32 | Minimum free heap since boot in bytes (`ESP.getMinFreeHeap()`) |
+| `wifi_rssi` | int \| null | WiFi signal strength in dBm; `null` when not connected to a station |
+| `last_weather_fetch_ms` | uint32 | `millis()` of the last **successful** weather fetch; `0` = never fetched |
+| `last_quotes_fetch_ms` | uint32 | `millis()` of the last **successful** quotes fetch; `0` = never fetched |
+| `build_date` | string | Firmware build timestamp (`__DATE__ " " __TIME__`) |
+| `weather_cache_valid` | bool | `true` if weather data has been fetched at least once |
+| `weather_cache_stale` | bool | `true` if the last weather fetch failed (cache is stale) |
+| `weather_preview` | string | Human-readable weather summary (only present when `weather_cache_valid` is `true`) |
+| `quotes_cache_valid` | bool | `true` if quotes data has been fetched at least once |
+| `quotes_cache_stale` | bool | `true` if the last quotes fetch failed (cache is stale) |
+| `quotes_preview` | string | Human-readable quotes summary (only present when `quotes_cache_valid` is `true`) |
 
 ---
 

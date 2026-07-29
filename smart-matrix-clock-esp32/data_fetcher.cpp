@@ -25,11 +25,13 @@
 // now(small) - (0 - WEATHER_UPDATE_DEFAULT_MS) = now + WEATHER_UPDATE_DEFAULT_MS
 // which is >= cfgWeatherUpdateMs immediately).
 // Simplest approach: start at 0 and treat 0 as "never fetched" to force first fetch.
-static uint32_t _lastWeatherFetch = 0;   // millis() of last fetch attempt; 0 = never
-static bool     _forceFetch       = true; // force fetch on first enabled tick
+static uint32_t _lastWeatherFetch    = 0;   // millis() of last fetch attempt; 0 = never
+static bool     _forceFetch          = true; // force fetch on first enabled tick
+static uint32_t _lastWeatherSuccess  = 0;   // millis() of last successful weather fetch; 0 = never
 
-static uint32_t _lastQuotesFetch  = 0;   // millis() of last quotes fetch attempt; 0 = never
-static bool     _forceQuotesFetch = true; // force fetch on first enabled tick
+static uint32_t _lastQuotesFetch     = 0;   // millis() of last quotes fetch attempt; 0 = never
+static bool     _forceQuotesFetch    = true; // force fetch on first enabled tick
+static uint32_t _lastQuotesSuccess   = 0;   // millis() of last successful quotes fetch; 0 = never
 
 // ─── fetchWeather ─────────────────────────────────────────────────────────────
 
@@ -110,6 +112,7 @@ static void _fetchWeather() {
     weatherCache.valid     = true;
     weatherCache.stale     = false;
     weatherCache.fetchedAt = millis();
+    _lastWeatherSuccess    = millis();
 
     Serial.printf("[Weather] %.1f%c %s  Min%.1f Max%.1f\n",
                   temp, isFahrenheit ? 'F' : 'C',
@@ -234,6 +237,8 @@ static void _fetchQuotes() {
     // stale so the panel/display flag the data as incomplete.
     quotesCacheStale = anyFailed;
 
+    if (!anyFailed) _lastQuotesSuccess = millis();
+
     Serial.printf("[Quotes] Updated %u/%u symbols\n", newCount, count);
 }
 
@@ -245,6 +250,14 @@ void fetcherReset() {
 
 void quotesFetcherReset() {
     _forceQuotesFetch = true;
+}
+
+uint32_t fetcherLastWeatherMs() {
+    return _lastWeatherSuccess;
+}
+
+uint32_t fetcherLastQuotesMs() {
+    return _lastQuotesSuccess;
 }
 
 void fetcherTick() {

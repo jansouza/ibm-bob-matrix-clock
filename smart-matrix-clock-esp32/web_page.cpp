@@ -141,6 +141,7 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
     <span><span data-i18n="status.ntp">NTP</span>: <strong id="st-ntp">--</strong></span>
     <span><span data-i18n="status.slot">Slot</span>: <strong id="st-slot">--</strong></span>
     <span><span data-i18n="status.wifi">WiFi</span>: <strong id="st-ssid">--</strong></span>
+    <span><strong id="st-rssi" style="font-family:monospace">--</strong></span>
   </div>
 
   <div class="tabs">
@@ -489,6 +490,7 @@ input:checked + .slider-toggle:before{transform:translateX(18px);background:#fff
         <div class="info-row"><span class="info-label">SSID</span><span id="net-ssid">--</span></div>
         <div class="info-row"><span class="info-label">IP</span><span id="net-ip">--</span></div>
         <div class="info-row"><span class="info-label" data-i18n="network.status">Status</span><span id="net-status">--</span></div>
+        <div class="info-row"><span class="info-label" data-i18n="network.rssi">Signal (RSSI)</span><span id="net-rssi">--</span></div>
       </div>
     </div>
     <div class="card">
@@ -599,6 +601,9 @@ var I18N = {
     'quotes.cacheStale': '* Stale — last fetch failed',
     'network.currentConnection': 'Current connection',
     'network.status': 'Status',
+    'network.rssi': 'Signal (RSSI)',
+    'network.rssiUnit': 'dBm',
+    'network.rssiNoConn': 'Not connected',
     'network.newWifi': 'New WiFi network',
     'network.password': 'Password',
     'network.saveAndRestart': 'Save and restart',
@@ -705,6 +710,9 @@ var I18N = {
     'quotes.cacheStale': '* Desatualizado &#8212; &#250;ltimo fetch falhou',
     'network.currentConnection': 'Conex&#227;o atual',
     'network.status': 'Status',
+    'network.rssi': 'Sinal (RSSI)',
+    'network.rssiUnit': 'dBm',
+    'network.rssiNoConn': 'Sem conex&#227;o',
     'network.newWifi': 'Nova rede WiFi',
     'network.password': 'Senha',
     'network.saveAndRestart': 'Salvar e reiniciar',
@@ -944,6 +952,12 @@ function loadConfig() {
 }
 
 // ── Poll status ──────────────────────────────────────────────────────────────
+function rssiToBar(rssi) {
+  if (rssi >= -55) return '▂▄▆█';
+  if (rssi >= -67) return '▂▄▆\u200B';
+  if (rssi >= -78) return '▂▄\u200B\u200B';
+  return '▂\u200B\u200B\u200B';
+}
 function pollStatus() {
   fetch('/api/status').then(function(r){ return r.json(); }).then(function(s) {
     var preview = document.getElementById('live-preview');
@@ -955,6 +969,14 @@ function pollStatus() {
     setText('net-ssid', s.ssid || '--');
     setText('net-ip', s.ip || '--');
     setText('net-status', s.ntp_synced ? t('status.connected') : t('status.noSync'));
+
+    // WiFi RSSI — status bar (icon only) + Network tab (icon + dBm)
+    var rssiConnected = (s.wifi_rssi !== null && s.wifi_rssi !== undefined);
+    setText('st-rssi', rssiConnected ? rssiToBar(s.wifi_rssi) : '--');
+    var rssiEl = document.getElementById('net-rssi');
+    if (rssiEl) rssiEl.textContent = rssiConnected
+      ? rssiToBar(s.wifi_rssi) + ' ' + s.wifi_rssi + ' ' + t('network.rssiUnit')
+      : t('network.rssiNoConn');
 
     // Weather cache info
     var cacheEl = document.getElementById('weather-cache-info');
@@ -1370,13 +1392,7 @@ document.getElementById('btn-save-quotes').addEventListener('click', function() 
 // Calls GET /api/wifi/scan (blocking ~2 s on the device), then renders a list
 // of visible networks. Clicking a network row fills the SSID field and focuses
 // the password input so the user can immediately type the password.
-function rssiToBar(rssi) {
-  // Returns a 1–4 bar indicator based on RSSI dBm value.
-  if (rssi >= -55) return '▂▄▆█';
-  if (rssi >= -67) return '▂▄▆\u200B';
-  if (rssi >= -78) return '▂▄\u200B\u200B';
-  return '▂\u200B\u200B\u200B';
-}
+// rssiToBar() is defined in the pollStatus() section above and reused here.
 function runWifiScan() {
   var statusEl  = document.getElementById('wifi-scan-status');
   var resultsEl = document.getElementById('wifi-scan-results');
