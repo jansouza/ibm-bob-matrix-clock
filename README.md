@@ -83,6 +83,7 @@ tests/
 ├── test_data_fetcher_split.cpp   ← 23 tests for ticker-string splitting
 └── test_persistence_language.cpp ← 43 tests for language validation, formatQuotePrice, config constants
 docs/
+├── howto.md                      ← user how-to guide (web panel, messages, reset, automation)
 ├── api-rest.md                   ← complete REST API reference
 ├── home-assistant.md             ← Home Assistant integration guide
 ├── project-spec.md               ← full product specification
@@ -170,7 +171,9 @@ curl -X POST http://<ip>/api/message \
   -d '{"message": "Deploy complete!"}'
 ```
 
-Full documentation: [`docs/api-rest.md`](docs/api-rest.md)
+User how-to guide: [`docs/howto.md`](docs/howto.md)
+
+Full API documentation: [`docs/api-rest.md`](docs/api-rest.md)
 
 Home Assistant integration: [`docs/home-assistant.md`](docs/home-assistant.md)
 

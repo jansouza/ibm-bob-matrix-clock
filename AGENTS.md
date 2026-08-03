@@ -4,270 +4,143 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Project
 
-ESP32 firmware (Arduino/arduino-cli or PlatformIO) for a MAX7219 LED matrix clock. All 5 implementation phases are complete — see [`docs/implementation-plan.md`](docs/implementation-plan.md) for the roadmap and [`docs/project-spec.md`](docs/project-spec.md) for the full spec.
+ESP32 firmware (Arduino/arduino-cli or PlatformIO) for a MAX7219 LED matrix clock. Source lives in `smart-matrix-clock-esp32/`. Board FQBN: `esp32:esp32:esp32`.
 
-## Build & Flash Commands
-
-Board FQBN: `esp32:esp32:esp32` (ESP32 Dev Module). **Source lives in the `smart-matrix-clock-esp32/` subdirectory.**
+## Validation (run both after every code change)
 
 ```bash
-# Compile / verify (no device required — use this to check code before flashing)
+# 1. Host unit tests — must finish ✓ ALL PASS
+cd tests && make
+
+# 2. Firmware compile — no device required
 arduino-cli compile --fqbn esp32:esp32:esp32 smart-matrix-clock-esp32
-
-# Upload to device (replace /dev/ttyACM0 with the actual port)
-arduino-cli upload --fqbn esp32:esp32:esp32 --port /dev/ttyACM0 \
-  --upload-property upload.speed=115200 smart-matrix-clock-esp32
-
-# Serial monitor (115200 baud)
-arduino-cli monitor --port /dev/ttyUSB0 --config baudrate=115200
-
-# PlatformIO equivalents (if pio is installed instead)
-pio run            # compile
-pio run -t upload  # upload
-pio device monitor # serial monitor
 ```
+
+To run only specific test files: the test suite has no per-file runner; `cd tests && make` runs all of them together. To add or isolate test focus, add a new `test_<name>.cpp` and register it in `tests/Makefile` `TEST_SRCS`.
 
 ## Documentation Rule
 
-**After every implementation, always update the documentation** to reflect the changes before reporting completion. This includes:
+After every implementation, update **all four** of these before reporting completion:
 
-1. **`AGENTS.md`** — update architecture notes, API sections, or gotchas affected by the change.
-2. **`README.md`** — update the REST API table, enhancements status table and features list as applicable.
-3. **`docs/api-rest.md`** — add or update endpoint documentation for any new or modified route.
-4. **`docs/enhancements-plan.md`** — mark the corresponding sub-task as `[x] done` and move it from the "Pending" table to the "Implemented" table.
+1. `AGENTS.md` — architecture notes, gotchas
+2. `README.md` — REST API table, features list
+3. `docs/api-rest.md` — new/modified endpoint docs
+4. `docs/enhancements-plan.md` — mark sub-task `[x] done`, move to "Implemented" table
 
-Documentation updates are part of the definition of done — a task is not complete until both the code and the docs are in sync.
+## Hard Rules (violating these breaks things)
 
----
+- **No `delay()` in `loop()`** — use `millis()`-based timers. Exception: `delay(200)` in `_stationConnect()` (`wifi_manager.cpp`) runs only during `setup()`.
+- **No `ESP.restart()` directly** — always use `scheduleRestart()` from `wifi_manager.cpp` so the HTTP response reaches the client first.
+- **HTTP handlers only set state variables** — no display or network I/O. Side-effects happen in the next `loop()` iteration.
+- **`HTTPClient` only inside `fetcherTick()`** — never inside HTTP handlers.
+- **Use `http.getString()`, not `http.getStream()`** — chunked/compressed ESP32 responses are unreliable with `getStream()`, causing spurious JSON parse errors.
+- **UTF-8 → Latin-1 then `expandIconTags()`** — order matters. `utf8ToLatin1()` first, then `expandIconTags()`. `messageText[]` is stored Latin-1.
+- **Always use `ArduinoJson`** for JSON — never string concatenation.
+- **`applyTimezone()` must run after `ntpBegin()`** in `setup()`, and again inside `ntpTick()` after each re-sync, because `configTime()` resets TZ to UTC internally every call.
 
-Always run **both** validation steps after any code change before reporting completion:
+## Naming / Language Globals — Common Pitfall
 
-```bash
-# 1. Native unit tests (no device required) — must finish with ✓ ALL PASS
-cd tests && make
+The codebase has **two independent language settings** — confusing names, distinct purposes:
 
-# 2. Firmware compile check (no device required)
-arduino-cli compile --fqbn esp32:esp32:esp32 smart-matrix-clock-esp32
-```
+- `cfgLocale` (`globals.h`, NVS key `"locale"`) — on-device content locale: date weekday/month names, number formatting, quote search language. Validated against `locale_data.cpp`.
+- `cfgUiLanguage` (`globals.h`, NVS key `"ui_lang"`) — web panel UI language. Validated against `_uiLanguages[]` in `persistence.cpp` only.
 
-The test suite lives in [`tests/`](tests/) and runs on the host — no ESP32 needed. See [docs/testing.md](docs/testing.md) for the full reference.
-
-### Required libraries (already installed)
-
-| Library | Version |
-|---|---|
-| `MD_MAX72XX` | 3.5.1 |
-| `MD_Parola` | 3.7.5 |
-| `ESP Async WebServer` | 3.11.2 |
-| `Async TCP` | 3.5.0 |
-| `ArduinoJson` | 7.4.3 |
-
-To install missing libraries: `arduino-cli lib install "MD_MAX72XX" "MD_Parola" "ESP Async WebServer" "AsyncTCP" "ArduinoJson"`
-
-To install the ESP32 core (if not present): `arduino-cli core install esp32:esp32`
-
-## Architecture: The Non-Obvious Parts
-
-- **No blocking anywhere except `setup()`** — `delay()` is forbidden in `loop()`. Every timer uses `millis()`. Exception: `delay(200)` inside `_stationConnect()` in `wifi_manager.cpp` is explicitly allowed because it runs only during `setup()`.
-- **HTTP handlers must only set state variables** — never call display or network I/O. The actual work happens in `loop()`.
-- **`ESP.restart()` is never called directly** — always via `scheduleRestart(delayMs)` so the HTTP response reaches the client first.
-- **`HTTPClient` is only called from `fetcherTick()`** — never inside HTTP handlers, because it is synchronous and would block the render loop.
-- **Always use `http.getString()`, never `http.getStream()`** — chunked/compressed responses are unreliable with `getStream()` on ESP32, producing spurious parse errors on valid payloads.
-- **All display strings must be UTF-8 → Latin-1 converted** before passing to `MD_Parola` / `MD_MAX72XX`. `messageText[]` is stored in Latin-1, not UTF-8.
-- **Message pipeline order matters**: `utf8ToLatin1()` first, then `expandIconTags()` — icon tags contain ASCII-range brackets that survive the encoding step.
-- **JSON always built/parsed with `ArduinoJson`** — never manual string concatenation.
-- **Message slot is one-shot**: `messagePending` is set by the HTTP handler and cleared by `displayTick()` after one scroll completes. Only the most recent message is kept.
-- **Slot 0 (clock) is the permanent base** — it has no interval (`slotIntervalMs[0] = 0`); other slots return to it after their scroll ends.
-- **`applyTimezone()` must run after `ntpBegin()`** — `configTime()` resets TZ to UTC internally. Also called inside `ntpTick()` during periodic re-sync (every `NTP_RESYNC_MS`) for the same reason.
-- **Two separate language settings**: `cfgLanguage` controls the on-device clock/date locale (weekday/month names); `cfgUiLanguage` controls the web panel's own UI language. They are stored independently in NVS.
-- **No authentication on any endpoint** — an API-key mechanism was implemented and removed because the web panel's JS never sent the header, locking the panel out of its own write actions.
+There is no `cfgLanguage` variable — older docs that say so are wrong.
 
 ## Module Layout
 
 | File | Responsibility |
 |---|---|
-| `config.h` | All pin definitions, buffer sizes, default values, NVS keys |
-| `globals.h/cpp` | Shared state between HTTP layer and display layer (extern vars) |
-| `display.h/cpp` | MD_Parola rendering, blink, scroll, slot rotation manager |
-| `wifi_manager.h/cpp` | WiFi connect, setup AP, deferred restart |
-| `ntp.h/cpp` | `configTime()` wrapper, sync polling, periodic re-sync |
-| `text_encoding.h/cpp` | UTF-8 ↔ Latin-1 conversion; `expandIconTags()` for `[heart]`/`[bell]`/`[warn]` etc. |
-| `locale_data.h/cpp` | Day/month names by language, IANA timezone → POSIX TZ table, WMO weathercode strings |
-| `persistence.h/cpp` | NVS load/save via `Preferences`, `applyTimezone()`, `factoryReset()` |
-| `date_font.h` | Custom bitmap font for date display |
-| `web_page.h/cpp` | Single self-contained HTML/CSS/JS string literal |
+| `config.h` | All pin definitions, buffer sizes, defaults, NVS keys (≤15 chars each) |
+| `globals.h/cpp` | Shared state between HTTP layer and display layer (`extern` vars) |
+| `display.h/cpp` | MD_Parola rendering, blink, scroll, slot rotation |
+| `wifi_manager.h/cpp` | WiFi connect, setup AP, `scheduleRestart()` |
+| `ntp.h/cpp` | `configTime()` wrapper, sync polling, re-sync |
+| `text_encoding.h/cpp` | UTF-8 ↔ Latin-1 conversion; `expandIconTags()` |
+| `locale_data.h/cpp` | Day/month names, IANA→POSIX TZ table, WMO weather codes |
+| `persistence.h/cpp` | NVS load/save, `applyTimezone()`, `factoryReset()`, `isUiLanguageValid()` |
+| `web_page.h/cpp` | Single monolithic `~62 KB` raw-string literal `WEB_PAGE_HTML` — entire UI |
 | `web_routes.h/cpp` | `ESPAsyncWebServer` route registration |
 | `data_fetcher.h/cpp` | Open-Meteo + Yahoo Finance HTTP fetch, cache structs |
 
+**Counterintuitive locations**: `applyTimezone()` is in `persistence.cpp` not `ntp.cpp`; `expandIconTags()` is in `text_encoding.cpp` not `display.cpp`; `scheduleRestart()` is in `wifi_manager.cpp` but used for all restarts (not just WiFi).
+
 ## Key Globals (globals.h)
 
-- `ntpSynced` — set true by `ntpTick()`, read by `displayTick()` to switch `--:--` → `HH:MM`
-- `messagePending` / `messageText[]` — set by HTTP handler, consumed (and cleared) by `displayTick()`
-- `messageBrightness` / `messageScrollSpeedMs` — per-message overrides; `-1` means use configured global value
+- `ntpSynced` — set by `ntpTick()`, read by `displayTick()` to switch `--:--` → `HH:MM`
+- `messagePending` / `messageText[]` — set by HTTP handler, consumed (cleared) by `displayTick()`
+- `messageMode` — `MESSAGE_MODE_SCROLL` (0), `MESSAGE_MODE_BLINK` (1), `MESSAGE_MODE_STATIC` (2), `MESSAGE_MODE_BLINK_SCROLL` (3)
+- `messageBrightness` / `messageScrollSpeedMs` — per-message overrides; `-1` means use configured global
 - `slotEnabled[4]` — `{clock, message, weather, quotes}` — disabled slots are silently skipped
-- `slotIntervalMs[4]` — clock slot is `0` (permanent base); message slot is `0` (one-shot); default values in `globals.cpp` are `{0, 0, 60000, 120000}` regardless of `config.h` display defaults
-- `slotScheduleStartMin[slot]` / `slotScheduleEndMin[slot]` — daily window in minutes-of-day (0–1439); **`start == end` means "always active"** — only slots 2 and 3 (weather/quotes) use this
-- `slotScheduleDaysMask[slot]` — bitmask of enabled weekdays; bit N corresponds to `tm_wday` (0=Sunday, 6=Saturday); `0x7F` = all days
-- `messageHistory[]` — ring buffer of last 20 messages; managed via `messageHistoryHead` (oldest index) and `messageHistoryCount`; exposed by `GET /api/messages/history`
+- `slotIntervalMs[4]` — defaults in `globals.cpp` are `{0, 0, 60000, 120000}`; clock=0 (permanent base), message=0 (one-shot)
+- `slotScheduleStartMin[slot]` / `slotScheduleEndMin[slot]` — minutes-of-day (0–1439); **`start == end` = "always active"** (not invalid); only slots 2/3 use this
+- `slotScheduleDaysMask[slot]` — bit N = `tm_wday` (0=Sunday … 6=Saturday); `0x7F` = all days; only slots 2/3 use this
+- `messageHistory[]` — ring buffer, 20 entries; `messageHistoryHead` = oldest index; iterate oldest-to-newest: `idx = (messageHistoryHead + i) % MESSAGE_HISTORY_SIZE`
 
 ## Hardware
 
-- 4× MAX7219 FC16 8×8 LED modules chained via VSPI: CLK=18, DATA/MOSI=23, CS=5
-- Display type constant: `MD_MAX72XX::FC16_HW` — must match physical hardware type or columns will be scrambled
-- **FC16_HW column direction**: raw column 0 is the **rightmost** physical pixel, raw column 31 is the leftmost — critical for any direct pixel manipulation via `getGraphicObject()`; `_writeSmallDigit()` compensates with `setColumn(31 - visualCol - i, ...)`
+- 4× MAX7219 FC16 8×8 modules via VSPI: CLK=18, DATA/MOSI=23, CS=5
+- **`MD_MAX72XX::FC16_HW` column direction**: raw column 0 = rightmost pixel, raw column 31 = leftmost. `_writeSmallDigit()` compensates with `setColumn(31 - visualCol - i, ...)`. Read `_startDateDisplay()` in `display.cpp` before any direct pixel work.
 - BOOT button (GPIO 0, active-LOW) held at power-on triggers factory reset
 
-## NTP / Timezone
+## Display Render Pipeline
 
-- `configTime(0, 0, server)` always sets UTC offsets to 0 — timezone is handled entirely via POSIX TZ string through `setenv("TZ", ...)` + `tzset()`
-- Clock validity check: `tm_year + 1900 >= 2020` (year < 2020 means epoch, i.e., not synced)
-- Periodic re-sync calls `configTime()` again; `ntpSynced` stays `true` during re-sync (clock keeps last value); `applyTimezone()` must be re-applied immediately after or the display reverts to UTC
+- `displayTick()` compares against `_lastTimeStr` before calling `_display.print()` — preserve this guard; the MAX7219 write is the expensive part.
+- `_display.print()` **clears the entire display**. In `CLOCK_MODE_HHMMSS`, `HH:MM` is rendered with `PA_LEFT`, then seconds are overlaid via `setColumn()` *after* — never before.
+- Seconds start column is **dynamic**: `_ssLayout(hmWidthPx)` measures `HH:MM` pixel width via `getTextWidth()` first. Never hardcode a column.
+- Changing `cfgClockMode` at runtime requires `displayForceRedraw()` to reset `_lastTimeStr` and alignment state.
 
 ## Data Sources
 
-- **Weather**: Open-Meteo — free, no API key; uses `current=temperature_2m,weathercode` + `daily=temperature_2m_max,temperature_2m_min` in a single request
-- **Quotes**: Yahoo Finance `v8/finance/chart/{symbol}` (per-symbol, not batch) — **not** `v7/finance/quote` (that endpoint 401s without a session cookie). A fake desktop User-Agent with `http.setUserAgent(...)` is required — Yahoo rejects the default ESP32 UA.
-
-## Failure / Cache Policy
-
-- If a slot's data fetch fails and there is no cache → slot is silently skipped that rotation cycle
-- If cache exists but fetch failed → display with `*` prefix (e.g., `*22°C Nublado`)
-
-## Clock Mode (HH:MM:SS)
-
-- `cfgClockMode` — `CLOCK_MODE_HHMM` (0, default) or `CLOCK_MODE_HHMMSS` (1); persisted in NVS key `"clock_mode"`
-- In HHMMSS mode: `HH:MM` is rendered with `PA_LEFT` via `_display.print()`; seconds are overlaid via direct `setColumn()` calls (does **not** clear the display). The seconds position is computed dynamically by `_ssLayout(hmWidthPx)` — **not** a fixed column — so `HH:MM` width is measured first with `getTextWidth()`.
-- Changing `cfgClockMode` at runtime requires calling `displayForceRedraw()` (sets `_lastTimeStr[0] = '\0'` and resets alignment to `PA_CENTER`) — otherwise the display keeps stale layout state.
-- `/api/status` returns `time_str` as `HH:MM:SS` when `cfgClockMode == CLOCK_MODE_HHMMSS`, used by the web panel live preview (polled every 1 second).
-
-## Adding a New UI Language
-
-1. Add the code string to `_uiLanguages[]` in `persistence.cpp` — this is the **only** validation source.
-2. Add a matching I18N dictionary entry in `web_page.cpp`.
-No other branching logic is needed.
-
-## Adding a New Slot
-
-1. Add an index constant in `config.h`.
-2. Initialize `slotEnabled[]` and `slotIntervalMs[]` entry in `globals.cpp`.
-3. Add cache struct in `globals.h/cpp`.
-4. Add fetch logic in `data_fetcher.cpp` called from `fetcherTick()`.
-5. Add rendering branch in `slotRotationTick()` in `display.cpp`.
-6. Expose enable/interval config fields through `POST /api/config` in `web_routes.cpp`.
-7. Persist the new fields in `persistence.cpp`.
+- **Weather**: Open-Meteo (no API key); `current=temperature_2m,weathercode` + `daily=temperature_2m_max,temperature_2m_min` in one request.
+- **Quotes**: Yahoo Finance `v8/finance/chart/{symbol}` per-symbol — **not** `v7/finance/quote` (401s without session cookie). Requires a fake desktop User-Agent via `http.setUserAgent(...)`.
+- Cache policy: fetch failed + no cache → slot silently skipped; fetch failed + cache exists → display with `*` prefix.
 
 ## Naming Conventions
 
-- Module-private state variables: `static` in `.cpp`, prefixed with `_` (e.g., `_lastBlink`, `_colonVisible`).
-- Public API functions: `camelCase` with module prefix (e.g., `displayTick()`, `ntpBegin()`, `wifiConnect()`).
-- Constants in `config.h`: `SCREAMING_SNAKE_CASE`.
-- `extern` globals in `globals.h`: no prefix, plain `camelCase` (e.g., `ntpSynced`, `messagePending`).
+- Module-private state: `static` in `.cpp`, prefixed `_` (e.g., `_lastBlink`)
+- Public API functions: `camelCase` with module prefix (e.g., `displayTick()`, `ntpBegin()`)
+- Constants in `config.h`: `SCREAMING_SNAKE_CASE`
+- `extern` globals in `globals.h`: no prefix, plain `camelCase` (e.g., `ntpSynced`)
+- NVS keys: defined in `config.h`, must be ≤15 characters
 
 ## Include Order (per file)
 
-1. Own header (e.g., `#include "display.h"`)
-2. Project headers (e.g., `#include "config.h"`, `#include "globals.h"`)
-3. Arduino/ESP32 library headers (e.g., `#include <MD_Parola.h>`, `#include <Arduino.h>`)
-4. C standard headers (e.g., `#include <time.h>`)
-
-## Display Write Optimisation
-
-`displayTick()` compares the new time string against `_lastTimeStr` and only calls `_display.print()` when the content actually changed — preserve this guard when modifying the render path. The MAX7219 write is the expensive/blocking part of each tick.
-
-## FC16_HW Column Direction (direct pixel work only)
-
-Raw column 0 is the **rightmost** physical pixel; raw column 31 is the leftmost. The `_startDateDisplay()` implementation in `display.cpp` has a detailed comment explaining how this affects repositioning and day-of-week decoration loops — read it before doing any `getGraphicObject()` pixel manipulation.
-
-## Yahoo Finance API
-
-Use `v8/finance/chart/{symbol}` — **not** `v7/finance/quote` (that endpoint 401s without a session cookie). Set a fake desktop User-Agent with `http.setUserAgent(...)` — Yahoo rejects the default ESP32 UA.
+1. Own header
+2. Project headers (`config.h`, `globals.h`, etc.)
+3. Arduino/ESP32 library headers (`<MD_Parola.h>`, `<Arduino.h>`, etc.)
+4. C standard headers (`<time.h>`, `<string.h>`, etc.)
 
 ## Test Suite
 
-The test suite is a native host build — no ESP32, no simulator, no special toolchain. It compiles and runs with plain `g++`.
+Host build — plain `g++`, no ESP32 required. Lives in `tests/`. Framework in `tests/framework.h` (custom `SUITE`/`TEST`/`ASSERT_*` macros).
 
-### Running the tests
+- New test file: add `test_<name>.cpp` to `tests/`, register in `TEST_SRCS` in `tests/Makefile`.
+- For private (`static`) functions: replicate the algorithm inline in the test file with comment `// Algorithm replica from <file>.cpp / <function>()`.
+- Modules with Arduino/ESP32 deps (`display.cpp`, `wifi_manager.cpp`, `ntp.cpp`, `persistence.cpp`, `web_routes.cpp`, `data_fetcher.cpp`) cannot be host-tested — validated on-device only.
 
-```bash
-cd tests
-make          # build + run (shows per-suite results and final ✓ / ✗ summary)
-make build    # build only
-make clean    # remove build artefacts
-```
+## Adding a New Slot (all 7 steps required)
 
-The runner exits with code `0` when all tests pass and `1` when any test fails. CI should check the exit code.
+1. Index constant in `config.h`
+2. `slotEnabled[]` + `slotIntervalMs[]` entry in `globals.cpp`
+3. Cache struct in `globals.h/cpp`
+4. Fetch logic in `data_fetcher.cpp` called from `fetcherTick()`
+5. Render branch in `slotRotationTick()` in `display.cpp`
+6. Config fields in `POST /api/config` in `web_routes.cpp`
+7. Persist fields in `persistence.cpp`
 
-### Test file map
+## Adding a New UI Language
 
-| File | Module under test | What is covered |
+1. Add code to `_uiLanguages[]` in `persistence.cpp` (single validation source)
+2. Add I18N dictionary entry in `web_page.cpp`
+No other branching needed.
+
+## Pending Enhancements (docs/enhancements-plan.md)
+
+| Sub-Task | Feature | Notes |
 |---|---|---|
-| [`tests/test_text_encoding.cpp`](tests/test_text_encoding.cpp) | `text_encoding.cpp` | `utf8ToLatin1`, `latin1ToUtf8`, `expandIconTags` (all 11 icons, unknown tags, buffer limits, null guards), `formatQuotePrice` |
-| [`tests/test_locale_data.cpp`](tests/test_locale_data.cpp) | `locale_data.cpp` | Day/month names EN + PT, `ianaToPostfix` (known zones + edge cases), `tzTableEntry` consistency, all WMO codes EN + PT |
-| [`tests/test_slot_schedule.cpp`](tests/test_slot_schedule.cpp) | `display.cpp` (schedule algorithm) | Same-day window, always-active sentinel (`start == end`), midnight-crossing window, day-mask gating, night-brightness window |
-| [`tests/test_data_fetcher_split.cpp`](tests/test_data_fetcher_split.cpp) | `data_fetcher.cpp` (ticker split) | Comma splitting, whitespace trimming, empty tokens, max-symbol cap, buffer safety |
-| [`tests/test_persistence_language.cpp`](tests/test_persistence_language.cpp) | `persistence.cpp` / `config.h` | `isUiLanguageValid`, `formatQuotePrice` separators, NVS key length ≤ 15, config constant sanity |
-
-### What modules are NOT covered by host tests
-
-These modules have hard dependencies on Arduino/ESP32 runtime APIs and cannot be tested without hardware:
-
-| Module | Reason |
-|---|---|
-| `display.cpp` | Requires `MD_Parola` / `MD_MAX72XX` hardware objects |
-| `wifi_manager.cpp` | Requires `WiFi.*` ESP32 stack |
-| `ntp.cpp` | Requires `configTime()` / `getLocalTime()` ESP32 APIs |
-| `persistence.cpp` | Requires `Preferences` (NVS flash) |
-| `web_routes.cpp` | Requires `ESPAsyncWebServer` |
-| `data_fetcher.cpp` | Requires `HTTPClient` and a live network |
-
-For these modules, validation is done on-device after flashing.
-
-### Adding tests for new logic
-
-When you add or modify a **pure-logic function** (no Arduino/ESP32 calls) in any module:
-
-1. **Decide the file.** If the function lives in `text_encoding.cpp` or `locale_data.cpp`, add tests directly to the matching test file. For logic extracted from other modules (like the schedule algorithm in `display.cpp`), add a new `test_<module>.cpp`.
-
-2. **Add a new test file** (if needed):
-   - Add `test_<name>.cpp` in `tests/`.
-   - Register it in the `TEST_SRCS` list in [`tests/Makefile`](tests/Makefile).
-   - Include `framework.h` and declare `SUITE`/`TEST` blocks — no `main()` needed.
-
-3. **Write SUITE + TEST blocks.** Group related assertions into named suites:
-   ```cpp
-   #include "framework.h"
-   #include "my_module.h"    // or replicate the algorithm inline
-
-   SUITE("myFunction — normal inputs") {
-       TEST("zero input returns zero") {
-           ASSERT_EQ(myFunction(0), 0);
-       }
-       TEST("negative input is clamped") {
-           ASSERT_TRUE(myFunction(-1) >= 0);
-       }
-   }
-   ```
-
-4. **For private (static) functions:** replicate the algorithm in the test file with a comment `// Algorithm replica from <file>.cpp / <function>()`. Add a note that the replica must be kept in sync if the original changes.
-
-5. **Run `cd tests && make`** — must finish `✓ ALL PASS` with no warnings before committing.
-
-6. **Also run the firmware compile** — test files must never change firmware source:
-   ```bash
-   arduino-cli compile --fqbn esp32:esp32:esp32 smart-matrix-clock-esp32
-   ```
-
-### Framework macros reference
-
-| Macro | Usage |
-|---|---|
-| `SUITE("name") { ... }` | Declares and registers a test suite |
-| `TEST("desc") { ... }` | Named test case inside a suite |
-| `ASSERT_EQ(a, b)` | Equality — prints values on failure |
-| `ASSERT_NE(a, b)` | Inequality |
-| `ASSERT_TRUE(expr)` | Truthy |
-| `ASSERT_FALSE(expr)` | Falsy |
-| `ASSERT_STREQ(s1, s2)` | `strcmp(s1, s2) == 0` |
-| `ASSERT_STRNE(s1, s2)` | `strcmp(s1, s2) != 0` |
-| `ASSERT_NEAR(a, b, eps)` | `|a - b| <= eps` (floats) |
-
+| ST-3 | HTTP Basic Auth | Browser sends header automatically; custom headers in JS don't |
+| ST-6c | OTA update | Use `Update.h` (built into ESP32 core); `POST /api/ota` receives `.bin` |
+| ST-6f | Soft reboot | `scheduleRestart(1500)` exists; just needs a route in `web_routes.cpp` |
+| ST-7 | 12-hour clock | New `CLOCK_MODE_HHMMAMPM` constant needed |
+| ST-9 | Async WiFi scan | Current `WiFi.scanNetworks()` blocks ~2-3s — non-blocking variant required |
